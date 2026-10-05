@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://bmytvq50c284i"]
+
+[ext_resource type="Script" uid="uid://cmdtk1qdi1b8d" path="res://scenes/menu/menu.gd" id="1_kcc1k"]
+
+[node name="Menu" type="Control" unique_id=2004906648]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kcc1k")
