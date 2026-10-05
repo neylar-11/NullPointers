@@ -1,0 +1,98 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu01_perfil/perfil.gd" id="1_perfil"]
+
+[node name="Perfil" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_perfil")
+
+[node name="Fondo" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.09, 0.1, 0.14, 1)
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 120
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="LblTitulo" type="Label" parent="Margen/Columna"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 42
+text = "Crea tu perfil"
+
+[node name="LblDescripcion" type="Label" parent="Margen/Columna"]
+unique_name_in_owner = true
+modulate = Color(0.75, 0.75, 0.8, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Elige un alias para guardar tu progreso en este dispositivo."
+autowrap_mode = 3
+
+[node name="Espacio1" type="Control" parent="Margen/Columna"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="LblCampo" type="Label" parent="Margen/Columna"]
+modulate = Color(0.6, 0.6, 0.65, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "ALIAS"
+
+[node name="TxtAlias" type="LineEdit" parent="Margen/Columna"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+placeholder_text = "ej. estudiante_7421"
+max_length = 20
+clear_button_enabled = true
+
+[node name="LblError" type="Label" parent="Margen/Columna"]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 0.45, 0.45, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "El alias no puede estar vacío."
+autowrap_mode = 3
+
+[node name="Espacio2" type="Control" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnGuardar" type="Button" parent="Margen/Columna"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Guardar"
+
+[node name="BtnCancelar" type="Button" parent="Margen/Columna"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Cancelar"
+flat = true
