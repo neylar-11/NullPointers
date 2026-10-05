@@ -16,6 +16,7 @@ const RUTA_BD := "user://nullpointers_bd.json"
 const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mockups / CU-03)
 
 var bd: Dictionary = {}
+var modulo_seleccionado: int = 1      # lo pone el mapa (CU-02) antes de abrir la actividad
 
 func _ready() -> void:
 	cargar_bd()

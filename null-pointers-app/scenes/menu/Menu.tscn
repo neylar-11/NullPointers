@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bmytvq50c284i"]
 
-[ext_resource type="Script" path="res://scenes/menu/menu.gd" id="1_menu"]
+[ext_resource type="Script" uid="uid://i6h7kosbp83a" path="res://scenes/menu/menu.gd" id="1_menu"]
 
-[node name="Menu" type="Control"]
+[node name="Menu" type="Control" unique_id=844521270]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="Fondo" type="ColorRect" parent="."]
+[node name="Fondo" type="ColorRect" parent="." unique_id=900591394]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +20,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.09, 0.1, 0.14, 1)
 
-[node name="Margen" type="MarginContainer" parent="."]
+[node name="Margen" type="MarginContainer" parent="." unique_id=1369260019]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,61 +32,61 @@ theme_override_constants/margin_top = 70
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 40
 
-[node name="Columna" type="VBoxContainer" parent="Margen"]
+[node name="Columna" type="VBoxContainer" parent="Margen" unique_id=1027298792]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="LblSaludo" type="Label" parent="Margen/Columna"]
+[node name="LblSaludo" type="Label" parent="Margen/Columna" unique_id=1990978060]
 layout_mode = 2
 theme_override_font_sizes/font_size = 42
 text = "Hola de nuevo"
 
-[node name="Perfil" type="HBoxContainer" parent="Margen/Columna"]
+[node name="Perfil" type="HBoxContainer" parent="Margen/Columna" unique_id=1434776931]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="BtnAvatar" type="Button" parent="Margen/Columna/Perfil"]
+[node name="BtnAvatar" type="Button" parent="Margen/Columna/Perfil" unique_id=734378058]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Foto"
 
-[node name="DatosPerfil" type="VBoxContainer" parent="Margen/Columna/Perfil"]
+[node name="DatosPerfil" type="VBoxContainer" parent="Margen/Columna/Perfil" unique_id=343167868]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/separation = 4
 
-[node name="LblUsuario" type="Label" parent="Margen/Columna/Perfil/DatosPerfil"]
+[node name="LblUsuario" type="Label" parent="Margen/Columna/Perfil/DatosPerfil" unique_id=2004006260]
 modulate = Color(0.7, 0.7, 0.75, 1)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Usuario"
 
-[node name="LblAlias" type="Label" parent="Margen/Columna/Perfil/DatosPerfil"]
+[node name="LblAlias" type="Label" parent="Margen/Columna/Perfil/DatosPerfil" unique_id=900254076]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 text = "estudiante_7421"
 
-[node name="LblPuntos" type="Label" parent="Margen/Columna/Perfil/DatosPerfil"]
+[node name="LblPuntos" type="Label" parent="Margen/Columna/Perfil/DatosPerfil" unique_id=280881774]
 unique_name_in_owner = true
 modulate = Color(1, 0.84, 0.3, 1)
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = "340 pts"
 
-[node name="Espacio1" type="Control" parent="Margen/Columna"]
+[node name="Espacio1" type="Control" parent="Margen/Columna" unique_id=376011572]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
-[node name="BtnJugar" type="Button" parent="Margen/Columna"]
+[node name="BtnJugar" type="Button" parent="Margen/Columna" unique_id=1164963963]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
 
-[node name="Margen" type="MarginContainer" parent="Margen/Columna/BtnJugar"]
+[node name="Margen" type="MarginContainer" parent="Margen/Columna/BtnJugar" unique_id=660427731]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -99,17 +99,17 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 28
 theme_override_constants/margin_bottom = 20
 
-[node name="Textos" type="VBoxContainer" parent="Margen/Columna/BtnJugar/Margen"]
+[node name="Textos" type="VBoxContainer" parent="Margen/Columna/BtnJugar/Margen" unique_id=874154492]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="LblTitulo" type="Label" parent="Margen/Columna/BtnJugar/Margen/Textos"]
+[node name="LblTitulo" type="Label" parent="Margen/Columna/BtnJugar/Margen/Textos" unique_id=428326598]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Jugar"
 
-[node name="LblJugarSub" type="Label" parent="Margen/Columna/BtnJugar/Margen/Textos"]
+[node name="LblJugarSub" type="Label" parent="Margen/Columna/BtnJugar/Margen/Textos" unique_id=1253500910]
 unique_name_in_owner = true
 modulate = Color(0.75, 0.75, 0.8, 1)
 layout_mode = 2
@@ -117,12 +117,12 @@ theme_override_font_sizes/font_size = 20
 text = "Mapa de módulos · Siguiente: Módulo 3 · Requerimientos"
 autowrap_mode = 3
 
-[node name="BtnProgreso" type="Button" parent="Margen/Columna"]
+[node name="BtnProgreso" type="Button" parent="Margen/Columna" unique_id=935769597]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
 
-[node name="Margen" type="MarginContainer" parent="Margen/Columna/BtnProgreso"]
+[node name="Margen" type="MarginContainer" parent="Margen/Columna/BtnProgreso" unique_id=1547173660]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -135,17 +135,17 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 28
 theme_override_constants/margin_bottom = 20
 
-[node name="Textos" type="VBoxContainer" parent="Margen/Columna/BtnProgreso/Margen"]
+[node name="Textos" type="VBoxContainer" parent="Margen/Columna/BtnProgreso/Margen" unique_id=1163778430]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="LblTitulo" type="Label" parent="Margen/Columna/BtnProgreso/Margen/Textos"]
+[node name="LblTitulo" type="Label" parent="Margen/Columna/BtnProgreso/Margen/Textos" unique_id=608959550]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Mi progreso"
 
-[node name="LblProgresoSub" type="Label" parent="Margen/Columna/BtnProgreso/Margen/Textos"]
+[node name="LblProgresoSub" type="Label" parent="Margen/Columna/BtnProgreso/Margen/Textos" unique_id=138455189]
 unique_name_in_owner = true
 modulate = Color(0.75, 0.75, 0.8, 1)
 layout_mode = 2
@@ -153,12 +153,12 @@ theme_override_font_sizes/font_size = 20
 text = "2 de 8 módulos completados"
 autowrap_mode = 3
 
-[node name="BtnTeoria" type="Button" parent="Margen/Columna"]
+[node name="BtnTeoria" type="Button" parent="Margen/Columna" unique_id=518889789]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
 
-[node name="Margen" type="MarginContainer" parent="Margen/Columna/BtnTeoria"]
+[node name="Margen" type="MarginContainer" parent="Margen/Columna/BtnTeoria" unique_id=503278903]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -171,28 +171,28 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 28
 theme_override_constants/margin_bottom = 20
 
-[node name="Textos" type="VBoxContainer" parent="Margen/Columna/BtnTeoria/Margen"]
+[node name="Textos" type="VBoxContainer" parent="Margen/Columna/BtnTeoria/Margen" unique_id=1211010440]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="LblTitulo" type="Label" parent="Margen/Columna/BtnTeoria/Margen/Textos"]
+[node name="LblTitulo" type="Label" parent="Margen/Columna/BtnTeoria/Margen/Textos" unique_id=862192317]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Teoría"
 
-[node name="LblTeoriaSub" type="Label" parent="Margen/Columna/BtnTeoria/Margen/Textos"]
+[node name="LblTeoriaSub" type="Label" parent="Margen/Columna/BtnTeoria/Margen/Textos" unique_id=800527926]
 modulate = Color(0.75, 0.75, 0.8, 1)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Repasa los temas de cada módulo"
 autowrap_mode = 3
 
-[node name="Espacio2" type="Control" parent="Margen/Columna"]
+[node name="Espacio2" type="Control" parent="Margen/Columna" unique_id=1623788735]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="LblAyuda" type="Label" parent="Margen/Columna"]
+[node name="LblAyuda" type="Label" parent="Margen/Columna" unique_id=99618624]
 modulate = Color(0.6, 0.6, 0.65, 1)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
