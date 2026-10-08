@@ -35,7 +35,7 @@ func _ready() -> void:
 
 
 func _on_guardar() -> void:
-	var alias := %TxtAlias.text.strip_edges()
+	var alias: String = %TxtAlias.text.strip_edges()
 
 	var ok: bool
 	if editando:
