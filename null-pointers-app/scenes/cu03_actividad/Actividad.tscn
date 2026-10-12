@@ -1,8 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scenes/cu03_actividad/actividad.gd" id="1_act"]
-
-[sub_resource type="ButtonGroup" id="GrupoOpciones"]
+[ext_resource type="Script" path="res://scenes/cu03_actividad/actividad.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Anillo.gd" id="anillo"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
 
 [node name="Actividad" type="Control"]
 layout_mode = 3
@@ -11,19 +11,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_act")
+script = ExtResource("script")
 
-[node name="Fondo" type="ColorRect" parent="."]
+[node name="Fondo" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.09, 0.1, 0.14, 1)
 
 [node name="PanelPregunta" type="MarginContainer" parent="."]
-unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -31,172 +29,416 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 60
+theme_override_constants/margin_top = 56
 theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
 
 [node name="Columna" type="VBoxContainer" parent="PanelPregunta"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 14
 
 [node name="Encabezado" type="HBoxContainer" parent="PanelPregunta/Columna"]
 layout_mode = 2
+theme_override_constants/separation = 8
 
-[node name="LblModulo" type="Label" parent="PanelPregunta/Columna/Encabezado"]
+[node name="BtnSalir" type="Button" parent="PanelPregunta/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
 unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="PanelPregunta/Columna/Encabezado/BtnSalir"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "cerrar"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="CentroChip" type="CenterContainer" parent="PanelPregunta/Columna/Encabezado"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 24
+
+[node name="ChipModulo" type="PanelContainer" parent="PanelPregunta/Columna/Encabezado/CentroChip"]
+layout_mode = 2
+theme_type_variation = &"Chip"
+
+[node name="LblModulo" type="Label" parent="PanelPregunta/Columna/Encabezado/CentroChip/ChipModulo"]
+layout_mode = 2
 text = "Módulo 3 · Requerimientos"
-
-[node name="LblPuntosReto" type="Label" parent="PanelPregunta/Columna/Encabezado"]
+theme_type_variation = &"Negrita"
 unique_name_in_owner = true
-modulate = Color(1, 0.84, 0.3, 1)
+
+[node name="ChipPts" type="PanelContainer" parent="PanelPregunta/Columna/Encabezado"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"Chip"
+unique_name_in_owner = true
+size_flags_vertical = 4
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/Encabezado/ChipPts"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icono" type="Control" parent="PanelPregunta/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(18, 18)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.0
+unique_name_in_owner = true
+size_flags_vertical = 4
+
+[node name="LblPuntosReto" type="Label" parent="PanelPregunta/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
 text = "0 pts"
-
-[node name="LblProgreso" type="Label" parent="PanelPregunta/Columna"]
+theme_type_variation = &"Negrita"
 unique_name_in_owner = true
-modulate = Color(0.7, 0.7, 0.75, 1)
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Pregunta 1 de 5 · En curso"
 
-[node name="Espacio1" type="Control" parent="PanelPregunta/Columna"]
+[node name="Progreso" type="HBoxContainer" parent="PanelPregunta/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LblProgreso" type="Label" parent="PanelPregunta/Columna/Progreso"]
+layout_mode = 2
+text = "Pregunta 1 de 5"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="LblEstado" type="Label" parent="PanelPregunta/Columna/Progreso"]
+layout_mode = 2
+text = "Reto cargado"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="Barra" type="ProgressBar" parent="PanelPregunta/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
+max_value = 5.0
+value = 1.0
+show_percentage = false
 
-[node name="LblEtiqueta" type="Label" parent="PanelPregunta/Columna"]
-modulate = Color(0.6, 0.6, 0.65, 1)
+[node name="E0" type="Control" parent="PanelPregunta/Columna"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
+custom_minimum_size = Vector2(0, 4)
+
+[node name="TarjetaPregunta" type="PanelContainer" parent="PanelPregunta/Columna"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+
+[node name="V" type="VBoxContainer" parent="PanelPregunta/Columna/TarjetaPregunta"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etq" type="Label" parent="PanelPregunta/Columna/TarjetaPregunta/V"]
+layout_mode = 2
 text = "PREGUNTA"
+theme_type_variation = &"EtiquetaAzul"
 
-[node name="LblPregunta" type="Label" parent="PanelPregunta/Columna"]
-unique_name_in_owner = true
+[node name="LblPregunta" type="Label" parent="PanelPregunta/Columna/TarjetaPregunta/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
 text = "¿Cuál de estos es un requerimiento no funcional?"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
 autowrap_mode = 3
-
-[node name="Espacio2" type="Control" parent="PanelPregunta/Columna"]
-custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
 
 [node name="Opciones" type="VBoxContainer" parent="PanelPregunta/Columna"]
 layout_mode = 2
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+
+[node name="Opcion1" type="PanelContainer" parent="PanelPregunta/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"Opcion"
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/Opciones/Opcion1"]
+layout_mode = 2
 theme_override_constants/separation = 14
+mouse_filter = 2
 
-[node name="BtnOpcion1" type="Button" parent="PanelPregunta/Columna/Opciones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
+[node name="Radio" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion1/Fila"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
-toggle_mode = true
-button_group = SubResource("GrupoOpciones")
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "radio"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion1/Fila"]
+layout_mode = 2
 text = "Opción 1"
-
-[node name="BtnOpcion2" type="Button" parent="PanelPregunta/Columna/Opciones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-toggle_mode = true
-button_group = SubResource("GrupoOpciones")
-text = "Opción 2"
-
-[node name="BtnOpcion3" type="Button" parent="PanelPregunta/Columna/Opciones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-toggle_mode = true
-button_group = SubResource("GrupoOpciones")
-text = "Opción 3"
-
-[node name="BtnOpcion4" type="Button" parent="PanelPregunta/Columna/Opciones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-toggle_mode = true
-button_group = SubResource("GrupoOpciones")
-text = "Opción 4"
-
-[node name="PanelRetro" type="PanelContainer" parent="PanelPregunta/Columna"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-
-[node name="Margen" type="MarginContainer" parent="PanelPregunta/Columna/PanelRetro"]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 16
-
-[node name="Columna" type="VBoxContainer" parent="PanelPregunta/Columna/PanelRetro/Margen"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="LblRetroTitulo" type="Label" parent="PanelPregunta/Columna/PanelRetro/Margen/Columna"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "¡Correcto!"
-
-[node name="LblRetroTexto" type="Label" parent="PanelPregunta/Columna/PanelRetro/Margen/Columna"]
-unique_name_in_owner = true
-modulate = Color(0.8, 0.8, 0.85, 1)
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "+20 puntos sumados al reto"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
 autowrap_mode = 3
 
-[node name="Botones" type="HBoxContainer" parent="PanelPregunta/Columna/PanelRetro/Margen/Columna"]
+[node name="Marca" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion1/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.0902, 0.5412, 0.298, 1)
+grosor = 3.0
+size_flags_vertical = 4
+visible = false
+
+[node name="Tag" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion1/Fila"]
+layout_mode = 2
+text = "CORRECTA"
+size_flags_vertical = 4
+visible = false
+theme_type_variation = &"EtiquetaVerde"
+
+[node name="BtnOpcion1" type="Button" parent="PanelPregunta/Columna/Opciones/Opcion1"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+
+[node name="Opcion2" type="PanelContainer" parent="PanelPregunta/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"Opcion"
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/Opciones/Opcion2"]
+layout_mode = 2
+theme_override_constants/separation = 14
+mouse_filter = 2
+
+[node name="Radio" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion2/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "radio"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion2/Fila"]
+layout_mode = 2
+text = "Opción 2"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+autowrap_mode = 3
+
+[node name="Marca" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion2/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.0902, 0.5412, 0.298, 1)
+grosor = 3.0
+size_flags_vertical = 4
+visible = false
+
+[node name="Tag" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion2/Fila"]
+layout_mode = 2
+text = "CORRECTA"
+size_flags_vertical = 4
+visible = false
+theme_type_variation = &"EtiquetaVerde"
+
+[node name="BtnOpcion2" type="Button" parent="PanelPregunta/Columna/Opciones/Opcion2"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+
+[node name="Opcion3" type="PanelContainer" parent="PanelPregunta/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"Opcion"
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/Opciones/Opcion3"]
+layout_mode = 2
+theme_override_constants/separation = 14
+mouse_filter = 2
+
+[node name="Radio" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion3/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "radio"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion3/Fila"]
+layout_mode = 2
+text = "Opción 3"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+autowrap_mode = 3
+
+[node name="Marca" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion3/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.0902, 0.5412, 0.298, 1)
+grosor = 3.0
+size_flags_vertical = 4
+visible = false
+
+[node name="Tag" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion3/Fila"]
+layout_mode = 2
+text = "CORRECTA"
+size_flags_vertical = 4
+visible = false
+theme_type_variation = &"EtiquetaVerde"
+
+[node name="BtnOpcion3" type="Button" parent="PanelPregunta/Columna/Opciones/Opcion3"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+
+[node name="Opcion4" type="PanelContainer" parent="PanelPregunta/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"Opcion"
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/Opciones/Opcion4"]
+layout_mode = 2
+theme_override_constants/separation = 14
+mouse_filter = 2
+
+[node name="Radio" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion4/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "radio"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion4/Fila"]
+layout_mode = 2
+text = "Opción 4"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+autowrap_mode = 3
+
+[node name="Marca" type="Control" parent="PanelPregunta/Columna/Opciones/Opcion4/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.0902, 0.5412, 0.298, 1)
+grosor = 3.0
+size_flags_vertical = 4
+visible = false
+
+[node name="Tag" type="Label" parent="PanelPregunta/Columna/Opciones/Opcion4/Fila"]
+layout_mode = 2
+text = "CORRECTA"
+size_flags_vertical = 4
+visible = false
+theme_type_variation = &"EtiquetaVerde"
+
+[node name="BtnOpcion4" type="Button" parent="PanelPregunta/Columna/Opciones/Opcion4"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+
+[node name="PanelRetro" type="PanelContainer" parent="PanelPregunta/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/PanelRetro"]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="BtnVerTeoria" type="Button" parent="PanelPregunta/Columna/PanelRetro/Margen/Columna/Botones"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 64)
+[node name="IconoRetro" type="Control" parent="PanelPregunta/Columna/PanelRetro/Fila"]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 20
-text = "Ver teoría"
-
-[node name="BtnContinuar" type="Button" parent="PanelPregunta/Columna/PanelRetro/Margen/Columna/Botones"]
+custom_minimum_size = Vector2(40, 40)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 20
-text = "Continuar"
+size_flags_vertical = 0
 
-[node name="Espacio3" type="Control" parent="PanelPregunta/Columna"]
+[node name="Textos" type="VBoxContainer" parent="PanelPregunta/Columna/PanelRetro/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 4
+size_flags_horizontal = 3
+
+[node name="LblRetroTitulo" type="Label" parent="PanelPregunta/Columna/PanelRetro/Fila/Textos"]
+layout_mode = 2
+text = "¡Correcto!"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="LblRetroTexto" type="Label" parent="PanelPregunta/Columna/PanelRetro/Fila/Textos"]
+layout_mode = 2
+text = "+20 puntos sumados al reto"
+theme_type_variation = &"TextoVerdeNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="E3" type="Control" parent="PanelPregunta/Columna"]
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="BtnEnviar" type="Button" parent="PanelPregunta/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
-disabled = true
 text = "Enviar respuesta"
-
-[node name="BtnSalir" type="Button" parent="PanelPregunta/Columna"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Salir del reto"
-flat = true
+custom_minimum_size = Vector2(0, 92)
+disabled = true
 
-[node name="PanelResultado" type="MarginContainer" parent="."]
+[node name="BotonesRetro" type="HBoxContainer" parent="PanelPregunta/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 12
 unique_name_in_owner = true
 visible = false
+
+[node name="BtnVerTeoria" type="Button" parent="PanelPregunta/Columna/BotonesRetro"]
+layout_mode = 2
+text = "Ver teoría"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+
+[node name="BtnContinuar" type="Button" parent="PanelPregunta/Columna/BotonesRetro"]
+layout_mode = 2
+text = "Continuar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+
+[node name="PanelResultado" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -204,182 +446,365 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 60
+theme_override_constants/margin_top = 56
 theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
+visible = false
 
 [node name="Columna" type="VBoxContainer" parent="PanelResultado"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 12
 
 [node name="LblResModulo" type="Label" parent="PanelResultado/Columna"]
-unique_name_in_owner = true
-modulate = Color(0.7, 0.7, 0.75, 1)
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
 text = "Módulo 3 · Requerimientos de software"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
 horizontal_alignment = 1
 
 [node name="LblResTitulo" type="Label" parent="PanelResultado/Columna"]
-unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
 text = "¡Reto completado!"
+theme_type_variation = &"Titulo"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="Espacio1" type="Control" parent="PanelResultado/Columna"]
-custom_minimum_size = Vector2(0, 20)
+[node name="E1" type="Control" parent="PanelResultado/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="CentroAnillo" type="CenterContainer" parent="PanelResultado/Columna"]
 layout_mode = 2
 
-[node name="LblResPorcentaje" type="Label" parent="PanelResultado/Columna"]
-unique_name_in_owner = true
-modulate = Color(1, 0.84, 0.3, 1)
+[node name="Anillo" type="Control" parent="PanelResultado/Columna/CentroAnillo"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 96
+custom_minimum_size = Vector2(220, 220)
+unique_name_in_owner = true
+script = ExtResource("anillo")
+porcentaje = 80.0
+grosor = 14.0
+
+[node name="VA" type="VBoxContainer" parent="PanelResultado/Columna/CentroAnillo/Anillo"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -46.0
+offset_right = 90.0
+offset_bottom = 46.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="LblResPorcentaje" type="Label" parent="PanelResultado/Columna/CentroAnillo/Anillo/VA"]
+layout_mode = 2
 text = "80 %"
+theme_type_variation = &"Enorme"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="LblResAciertos" type="Label" parent="PanelResultado/Columna"]
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="LblResAciertos" type="Label" parent="PanelResultado/Columna/CentroAnillo/Anillo/VA"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
 text = "de aciertos"
+theme_type_variation = &"Pequeno"
 horizontal_alignment = 1
 
-[node name="Espacio2" type="Control" parent="PanelResultado/Columna"]
-custom_minimum_size = Vector2(0, 20)
+[node name="E2" type="Control" parent="PanelResultado/Columna"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
 
-[node name="Estadisticas" type="HBoxContainer" parent="PanelResultado/Columna"]
+[node name="Tiles" type="HBoxContainer" parent="PanelResultado/Columna"]
 layout_mode = 2
+theme_override_constants/separation = 12
 
-[node name="Obtenidos" type="VBoxContainer" parent="PanelResultado/Columna/Estadisticas"]
+[node name="TLblResPuntos" type="PanelContainer" parent="PanelResultado/Columna/Tiles"]
 layout_mode = 2
+theme_type_variation = &"TileBlanco"
 size_flags_horizontal = 3
 
-[node name="LblResPuntos" type="Label" parent="PanelResultado/Columna/Estadisticas/Obtenidos"]
-unique_name_in_owner = true
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/Tiles/TLblResPuntos"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
+theme_override_constants/separation = 2
+
+[node name="LblResPuntos" type="Label" parent="PanelResultado/Columna/Tiles/TLblResPuntos/V"]
+layout_mode = 2
 text = "80"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="PanelResultado/Columna/Estadisticas/Obtenidos"]
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="Etq" type="Label" parent="PanelResultado/Columna/Tiles/TLblResPuntos/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
 text = "Puntos obtenidos"
-horizontal_alignment = 1
+theme_type_variation = &"Pequeno"
 autowrap_mode = 3
+horizontal_alignment = 1
 
-[node name="Maximos" type="VBoxContainer" parent="PanelResultado/Columna/Estadisticas"]
+[node name="TLblResMaximos" type="PanelContainer" parent="PanelResultado/Columna/Tiles"]
 layout_mode = 2
+theme_type_variation = &"TileBlanco"
 size_flags_horizontal = 3
 
-[node name="LblResMaximos" type="Label" parent="PanelResultado/Columna/Estadisticas/Maximos"]
-unique_name_in_owner = true
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/Tiles/TLblResMaximos"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
+theme_override_constants/separation = 2
+
+[node name="LblResMaximos" type="Label" parent="PanelResultado/Columna/Tiles/TLblResMaximos/V"]
+layout_mode = 2
 text = "100"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="PanelResultado/Columna/Estadisticas/Maximos"]
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="Etq" type="Label" parent="PanelResultado/Columna/Tiles/TLblResMaximos/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
 text = "Puntos máximos"
-horizontal_alignment = 1
+theme_type_variation = &"Pequeno"
 autowrap_mode = 3
+horizontal_alignment = 1
 
-[node name="Intentos" type="VBoxContainer" parent="PanelResultado/Columna/Estadisticas"]
+[node name="TLblResIntentos" type="PanelContainer" parent="PanelResultado/Columna/Tiles"]
 layout_mode = 2
+theme_type_variation = &"TileBlanco"
 size_flags_horizontal = 3
 
-[node name="LblResIntentos" type="Label" parent="PanelResultado/Columna/Estadisticas/Intentos"]
-unique_name_in_owner = true
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/Tiles/TLblResIntentos"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
+theme_override_constants/separation = 2
+
+[node name="LblResIntentos" type="Label" parent="PanelResultado/Columna/Tiles/TLblResIntentos/V"]
+layout_mode = 2
 text = "1"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="PanelResultado/Columna/Estadisticas/Intentos"]
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="Etq" type="Label" parent="PanelResultado/Columna/Tiles/TLblResIntentos/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "Intentos"
+text = "Intento"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
 horizontal_alignment = 1
-
-[node name="Espacio3" type="Control" parent="PanelResultado/Columna"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
 
 [node name="PanelEstado" type="PanelContainer" parent="PanelResultado/Columna"]
 layout_mode = 2
-
-[node name="Margen" type="MarginContainer" parent="PanelResultado/Columna/PanelEstado"]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 16
-
-[node name="Columna" type="VBoxContainer" parent="PanelResultado/Columna/PanelEstado/Margen"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="LblResEstado" type="Label" parent="PanelResultado/Columna/PanelEstado/Margen/Columna"]
+theme_type_variation = &"TarjetaVerde"
 unique_name_in_owner = true
+
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/PanelEstado"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_constants/separation = 12
+
+[node name="F1" type="HBoxContainer" parent="PanelResultado/Columna/PanelEstado/V"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="IconoEstado1" type="Control" parent="PanelResultado/Columna/PanelEstado/V/F1"]
+layout_mode = 2
+custom_minimum_size = Vector2(36, 36)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+unique_name_in_owner = true
+size_flags_vertical = 0
+
+[node name="T" type="VBoxContainer" parent="PanelResultado/Columna/PanelEstado/V/F1"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="LblResEstado" type="Label" parent="PanelResultado/Columna/PanelEstado/V/F1/T"]
+layout_mode = 2
 text = "Módulo completado"
-
-[node name="LblResDetalle" type="Label" parent="PanelResultado/Columna/PanelEstado/Margen/Columna"]
+theme_type_variation = &"TextoVerde"
 unique_name_in_owner = true
-modulate = Color(0.8, 0.8, 0.85, 1)
+
+[node name="LblResDetalle" type="Label" parent="PanelResultado/Columna/PanelEstado/V/F1/T"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
 text = "Alcanzaste el mínimo de 70 %"
-autowrap_mode = 3
-
-[node name="LblResSiguiente" type="Label" parent="PanelResultado/Columna/PanelEstado/Margen/Columna"]
+theme_type_variation = &"TextoVerdeNormal"
 unique_name_in_owner = true
-modulate = Color(0.8, 0.8, 0.85, 1)
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Siguiente módulo desbloqueado: Módulo 4 · Modelado con UML"
 autowrap_mode = 3
 
-[node name="LblResTotal" type="Label" parent="PanelResultado/Columna"]
+[node name="F2" type="HBoxContainer" parent="PanelResultado/Columna/PanelEstado/V"]
+layout_mode = 2
+theme_override_constants/separation = 12
 unique_name_in_owner = true
+
+[node name="IconoEstado2" type="Control" parent="PanelResultado/Columna/PanelEstado/V/F2"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "Puntuación total del perfil: 340 pts (+80)"
-horizontal_alignment = 1
+custom_minimum_size = Vector2(36, 36)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "candado"
+color = Color(0.0902, 0.5412, 0.298, 1)
+grosor = 2.5
+fondo = Color(1, 1, 1, 1)
+unique_name_in_owner = true
+size_flags_vertical = 0
+
+[node name="T" type="VBoxContainer" parent="PanelResultado/Columna/PanelEstado/V/F2"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="LblResSiguiente" type="Label" parent="PanelResultado/Columna/PanelEstado/V/F2/T"]
+layout_mode = 2
+text = "Siguiente módulo desbloqueado"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="LblResSiguienteDet" type="Label" parent="PanelResultado/Columna/PanelEstado/V/F2/T"]
+layout_mode = 2
+text = "Módulo 4 · Modelado con UML"
+theme_type_variation = &"TextoVerdeNormal"
+unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="Espacio4" type="Control" parent="PanelResultado/Columna"]
+[node name="TarjetaTotal" type="PanelContainer" parent="PanelResultado/Columna"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+
+[node name="F" type="HBoxContainer" parent="PanelResultado/Columna/TarjetaTotal"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="T" type="VBoxContainer" parent="PanelResultado/Columna/TarjetaTotal/F"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="Etq" type="Label" parent="PanelResultado/Columna/TarjetaTotal/F/T"]
+layout_mode = 2
+text = "Puntuación total del perfil"
+theme_type_variation = &"Pequeno"
+
+[node name="LblResTotal" type="Label" parent="PanelResultado/Columna/TarjetaTotal/F/T"]
+layout_mode = 2
+text = "340 pts"
+theme_type_variation = &"TituloTarjeta"
+unique_name_in_owner = true
+
+[node name="ChipDelta" type="PanelContainer" parent="PanelResultado/Columna/TarjetaTotal/F"]
+layout_mode = 2
+theme_type_variation = &"ChipVerde"
+unique_name_in_owner = true
+size_flags_vertical = 4
+
+[node name="LblResDelta" type="Label" parent="PanelResultado/Columna/TarjetaTotal/F/ChipDelta"]
+layout_mode = 2
+text = "+80"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="E3" type="Control" parent="PanelResultado/Columna"]
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="BtnReintentar" type="Button" parent="PanelResultado/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
 text = "Reintentar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
 
 [node name="BtnVolverMapa" type="Button" parent="PanelResultado/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
 text = "Volver al mapa"
-
-[node name="DialogoSalir" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
-title = "¿Salir del reto?"
-size = Vector2i(600, 240)
-ok_button_text = "Salir y volver al mapa"
-dialog_text = "Si sales ahora, este intento se descartará y no se guardarán los puntos obtenidos."
-dialog_autowrap = true
-cancel_button_text = "Seguir con el reto"
+custom_minimum_size = Vector2(0, 92)
+
+[node name="PanelSalir" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelSalir"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelSalir"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelSalir/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelSalir/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(620, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelSalir/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="IconoAlerta" type="Control" parent="PanelSalir/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(76, 76)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "alerta"
+color = Color(0.7608, 0.2549, 0.0471, 1)
+grosor = 3.0
+fondo = Color(0.9922, 0.9451, 0.9176, 1)
+
+[node name="LblSalirTitulo" type="Label" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "¿Salir del reto?"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+
+[node name="LblSalirTexto" type="Label" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Si sales ahora, este intento se descartará y no se guardarán los puntos obtenidos."
+theme_type_variation = &"Subtitulo"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="E" type="Control" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="BtnSalirConfirmar" type="Button" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Salir y volver al mapa"
+theme_type_variation = &"BotonNaranja"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
+
+[node name="BtnSeguirReto" type="Button" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Seguir con el reto"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
