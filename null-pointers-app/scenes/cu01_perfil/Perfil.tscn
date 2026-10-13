@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scenes/cu01_perfil/perfil.gd" id="1_perfil"]
+[ext_resource type="Script" path="res://scenes/cu01_perfil/perfil.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+[ext_resource type="Script" path="res://assets/ui/Avatar.gd" id="avatar"]
 
 [node name="Perfil" type="Control"]
 layout_mode = 3
@@ -9,18 +11,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_perfil")
+script = ExtResource("script")
 
-[node name="Fondo" type="ColorRect" parent="."]
+[node name="Fondo" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.09, 0.1, 0.14, 1)
 
-[node name="Margen" type="MarginContainer" parent="."]
+[node name="PanelMenu" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,71 +29,1070 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 120
+theme_override_constants/margin_top = 56
 theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
-
-[node name="Columna" type="VBoxContainer" parent="Margen"]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="LblTitulo" type="Label" parent="Margen/Columna"]
+theme_override_constants/margin_bottom = 36
 unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 42
-text = "Crea tu perfil"
 
-[node name="LblDescripcion" type="Label" parent="Margen/Columna"]
+[node name="Columna" type="VBoxContainer" parent="PanelMenu"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="PanelMenu/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="PanelMenu/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
 unique_name_in_owner = true
-modulate = Color(0.75, 0.75, 0.8, 1)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "Elige un alias para guardar tu progreso en este dispositivo."
-autowrap_mode = 3
 
-[node name="Espacio1" type="Control" parent="Margen/Columna"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
+[node name="Icono" type="Control" parent="PanelMenu/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
 
-[node name="LblCampo" type="Label" parent="Margen/Columna"]
-modulate = Color(0.6, 0.6, 0.65, 1)
+[node name="LblTituloBarra" type="Label" parent="PanelMenu/Columna/Encabezado"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "ALIAS"
+text = "Mi perfil"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
 
-[node name="TxtAlias" type="LineEdit" parent="Margen/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
+[node name="Hueco" type="Control" parent="PanelMenu/Columna/Encabezado"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-placeholder_text = "ej. estudiante_7421"
-max_length = 20
-clear_button_enabled = true
+custom_minimum_size = Vector2(56, 56)
 
-[node name="LblError" type="Label" parent="Margen/Columna"]
+[node name="BannerOk" type="PanelContainer" parent="PanelMenu/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
 unique_name_in_owner = true
 visible = false
-modulate = Color(1, 0.45, 0.45, 1)
+
+[node name="Fila" type="HBoxContainer" parent="PanelMenu/Columna/BannerOk"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "El alias no puede estar vacío."
+theme_override_constants/separation = 14
+
+[node name="Icono" type="Control" parent="PanelMenu/Columna/BannerOk/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(36, 36)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+size_flags_vertical = 0
+
+[node name="Textos" type="VBoxContainer" parent="PanelMenu/Columna/BannerOk/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="L1" type="Label" parent="PanelMenu/Columna/BannerOk/Fila/Textos"]
+layout_mode = 2
+text = "Perfil actualizado"
+theme_type_variation = &"TextoVerde"
+
+[node name="L2" type="Label" parent="PanelMenu/Columna/BannerOk/Fila/Textos"]
+layout_mode = 2
+text = "Los cambios se guardaron en este dispositivo"
+theme_type_variation = &"TextoVerdeNormal"
 autowrap_mode = 3
 
-[node name="Espacio2" type="Control" parent="Margen/Columna"]
+[node name="E1" type="Control" parent="PanelMenu/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="Centro" type="CenterContainer" parent="PanelMenu/Columna"]
+layout_mode = 2
+
+[node name="AvatarGrande" type="Control" parent="PanelMenu/Columna/Centro"]
+layout_mode = 2
+custom_minimum_size = Vector2(150, 150)
+mouse_filter = 2
+script = ExtResource("avatar")
+unique_name_in_owner = true
+
+[node name="LblAliasPerfil" type="Label" parent="PanelMenu/Columna"]
+layout_mode = 2
+text = "estudiante_7421"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="LblSubPerfil" type="Label" parent="PanelMenu/Columna"]
+layout_mode = 2
+text = "Perfil creado automáticamente"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="E2" type="Control" parent="PanelMenu/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="Opciones" type="VBoxContainer" parent="PanelMenu/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 14
+unique_name_in_owner = true
+
+[node name="FilaFoto" type="PanelContainer" parent="PanelMenu/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+
+[node name="Fila" type="HBoxContainer" parent="PanelMenu/Columna/Opciones/FilaFoto"]
+layout_mode = 2
+theme_override_constants/separation = 16
+mouse_filter = 2
+
+[node name="Caja" type="PanelContainer" parent="PanelMenu/Columna/Opciones/FilaFoto/Fila"]
+layout_mode = 2
+theme_type_variation = &"CajaIconoAzul"
+custom_minimum_size = Vector2(52, 52)
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="PanelMenu/Columna/Opciones/FilaFoto/Fila/Caja"]
+layout_mode = 2
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "camara"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+
+[node name="Lbl" type="Label" parent="PanelMenu/Columna/Opciones/FilaFoto/Fila"]
+layout_mode = 2
+text = "Cambiar foto"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+
+[node name="Flecha" type="Control" parent="PanelMenu/Columna/Opciones/FilaFoto/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_der"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="BtnFoto" type="Button" parent="PanelMenu/Columna/Opciones/FilaFoto"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="FilaNombre" type="PanelContainer" parent="PanelMenu/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+
+[node name="Fila" type="HBoxContainer" parent="PanelMenu/Columna/Opciones/FilaNombre"]
+layout_mode = 2
+theme_override_constants/separation = 16
+mouse_filter = 2
+
+[node name="Caja" type="PanelContainer" parent="PanelMenu/Columna/Opciones/FilaNombre/Fila"]
+layout_mode = 2
+theme_type_variation = &"CajaIconoAzul"
+custom_minimum_size = Vector2(52, 52)
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="PanelMenu/Columna/Opciones/FilaNombre/Fila/Caja"]
+layout_mode = 2
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "lapiz"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+
+[node name="Lbl" type="Label" parent="PanelMenu/Columna/Opciones/FilaNombre/Fila"]
+layout_mode = 2
+text = "Cambiar nombre de usuario"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+
+[node name="Flecha" type="Control" parent="PanelMenu/Columna/Opciones/FilaNombre/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_der"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="BtnNombre" type="Button" parent="PanelMenu/Columna/Opciones/FilaNombre"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="FilaContra" type="PanelContainer" parent="PanelMenu/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+
+[node name="Fila" type="HBoxContainer" parent="PanelMenu/Columna/Opciones/FilaContra"]
+layout_mode = 2
+theme_override_constants/separation = 16
+mouse_filter = 2
+
+[node name="Caja" type="PanelContainer" parent="PanelMenu/Columna/Opciones/FilaContra/Fila"]
+layout_mode = 2
+theme_type_variation = &"CajaIconoAzul"
+custom_minimum_size = Vector2(52, 52)
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="PanelMenu/Columna/Opciones/FilaContra/Fila/Caja"]
+layout_mode = 2
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "candado"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+
+[node name="Lbl" type="Label" parent="PanelMenu/Columna/Opciones/FilaContra/Fila"]
+layout_mode = 2
+text = "Configurar contraseña"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+
+[node name="Flecha" type="Control" parent="PanelMenu/Columna/Opciones/FilaContra/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_der"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="BtnContrasena" type="Button" parent="PanelMenu/Columna/Opciones/FilaContra"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="Resumen" type="PanelContainer" parent="PanelMenu/Columna"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+unique_name_in_owner = true
+visible = false
+
+[node name="Filas" type="VBoxContainer" parent="PanelMenu/Columna/Resumen"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="R0" type="HBoxContainer" parent="PanelMenu/Columna/Resumen/Filas"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="L" type="Label" parent="PanelMenu/Columna/Resumen/Filas/R0"]
+layout_mode = 2
+text = "Foto"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+
+[node name="LblResFoto" type="Label" parent="PanelMenu/Columna/Resumen/Filas/R0"]
+layout_mode = 2
+text = "—"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="Sep1" type="PanelContainer" parent="PanelMenu/Columna/Resumen/Filas"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 2)
+theme_type_variation = &"Separador"
+
+[node name="R1" type="HBoxContainer" parent="PanelMenu/Columna/Resumen/Filas"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="L" type="Label" parent="PanelMenu/Columna/Resumen/Filas/R1"]
+layout_mode = 2
+text = "Nombre de usuario"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+
+[node name="LblResNombre" type="Label" parent="PanelMenu/Columna/Resumen/Filas/R1"]
+layout_mode = 2
+text = "—"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="Sep2" type="PanelContainer" parent="PanelMenu/Columna/Resumen/Filas"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 2)
+theme_type_variation = &"Separador"
+
+[node name="R2" type="HBoxContainer" parent="PanelMenu/Columna/Resumen/Filas"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="L" type="Label" parent="PanelMenu/Columna/Resumen/Filas/R2"]
+layout_mode = 2
+text = "Contraseña"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+
+[node name="LblResContra" type="Label" parent="PanelMenu/Columna/Resumen/Filas/R2"]
+layout_mode = 2
+text = "—"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="E3" type="Control" parent="PanelMenu/Columna"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="BtnGuardar" type="Button" parent="Margen/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 90)
+[node name="BtnVolverMenu" type="Button" parent="PanelMenu/Columna"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "Guardar"
+text = "Volver al menú principal"
+unique_name_in_owner = true
+visible = false
 
-[node name="BtnCancelar" type="Button" parent="Margen/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
+[node name="BtnSeguir" type="Button" parent="PanelMenu/Columna"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+text = "Seguir editando"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+visible = false
+
+[node name="BtnCancelar" type="Button" parent="PanelMenu/Columna"]
+layout_mode = 2
 text = "Cancelar"
-flat = true
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+
+[node name="PanelNombre" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
+visible = false
+
+[node name="Columna" type="VBoxContainer" parent="PanelNombre"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="PanelNombre/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolverNombre" type="Button" parent="PanelNombre/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="PanelNombre/Columna/Encabezado/BtnVolverNombre"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="LblTituloBarra" type="Label" parent="PanelNombre/Columna/Encabezado"]
+layout_mode = 2
+text = "Nombre de usuario"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
+
+[node name="Hueco" type="Control" parent="PanelNombre/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+
+[node name="E0" type="Control" parent="PanelNombre/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="LblTitulo" type="Label" parent="PanelNombre/Columna"]
+layout_mode = 2
+text = "Elige cómo quieres que te llamemos"
+theme_type_variation = &"TituloSeccion"
+autowrap_mode = 3
+
+[node name="LblActual" type="RichTextLabel" parent="PanelNombre/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+bbcode_enabled = true
+fit_content = true
+text = "Tu nombre actual es [b]estudiante_7421[/b]. Puedes cambiarlo cuando quieras."
+
+[node name="E1" type="Control" parent="PanelNombre/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="LblEtq" type="Label" parent="PanelNombre/Columna"]
+layout_mode = 2
+text = "NUEVO NOMBRE DE USUARIO"
+theme_type_variation = &"Etiqueta"
+
+[node name="TxtNombre" type="LineEdit" parent="PanelNombre/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+max_length = 20
+placeholder_text = "ej. dev_mariana"
+
+[node name="Ayuda" type="HBoxContainer" parent="PanelNombre/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LblAyudaNombre" type="Label" parent="PanelNombre/Columna/Ayuda"]
+layout_mode = 2
+text = "Entre 3 y 20 caracteres"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="LblContador" type="Label" parent="PanelNombre/Columna/Ayuda"]
+layout_mode = 2
+text = "0 / 20"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="TarjetaInfo" type="PanelContainer" parent="PanelNombre/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaGris"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="PanelNombre/Columna/TarjetaInfo"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Icono" type="Control" parent="PanelNombre/Columna/TarjetaInfo/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "info"
+color = Color(0.3725, 0.4039, 0.4588, 1)
+grosor = 2.0
+size_flags_vertical = 0
+
+[node name="Textos" type="VBoxContainer" parent="PanelNombre/Columna/TarjetaInfo/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="L1" type="Label" parent="PanelNombre/Columna/TarjetaInfo/Fila/Textos"]
+layout_mode = 2
+text = "Se conserva tu nombre anterior:"
+theme_type_variation = &"TextoSecundario"
+
+[node name="LblAnterior" type="Label" parent="PanelNombre/Columna/TarjetaInfo/Fila/Textos"]
+layout_mode = 2
+text = "estudiante_7421"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="E3" type="Control" parent="PanelNombre/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnGuardarNombre" type="Button" parent="PanelNombre/Columna"]
+layout_mode = 2
+text = "Guardar cambios"
+unique_name_in_owner = true
+disabled = true
+
+[node name="BtnCancelarNombre" type="Button" parent="PanelNombre/Columna"]
+layout_mode = 2
+text = "Cancelar"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+
+[node name="PanelFoto" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
+visible = false
+
+[node name="Columna" type="VBoxContainer" parent="PanelFoto"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="PanelFoto/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolverFoto" type="Button" parent="PanelFoto/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="PanelFoto/Columna/Encabezado/BtnVolverFoto"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="LblTituloBarra" type="Label" parent="PanelFoto/Columna/Encabezado"]
+layout_mode = 2
+text = "Cambiar foto"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
+
+[node name="Hueco" type="Control" parent="PanelFoto/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+
+[node name="E0" type="Control" parent="PanelFoto/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="LblTitulo" type="Label" parent="PanelFoto/Columna"]
+layout_mode = 2
+text = "Elige un avatar"
+theme_type_variation = &"TituloSeccion"
+
+[node name="LblSub" type="Label" parent="PanelFoto/Columna"]
+layout_mode = 2
+text = "Selecciona uno del catálogo predefinido."
+theme_type_variation = &"Subtitulo"
+autowrap_mode = 3
+
+[node name="E1" type="Control" parent="PanelFoto/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="GridAvatares" type="GridContainer" parent="PanelFoto/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+columns = 3
+
+[node name="Btn1" type="Button" parent="PanelFoto/Columna/GridAvatares"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 176)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+
+[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn1"]
+layout_mode = 1
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+script = ExtResource("avatar")
+avatar_id = "avatar_01"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = -68.0
+offset_right = 55.0
+offset_bottom = 42.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn1"]
+layout_mode = 1
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -40.0
+offset_right = 13.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Btn2" type="Button" parent="PanelFoto/Columna/GridAvatares"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 176)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+
+[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn2"]
+layout_mode = 1
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+script = ExtResource("avatar")
+avatar_id = "avatar_02"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = -68.0
+offset_right = 55.0
+offset_bottom = 42.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn2"]
+layout_mode = 1
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -40.0
+offset_right = 13.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Btn3" type="Button" parent="PanelFoto/Columna/GridAvatares"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 176)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+
+[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn3"]
+layout_mode = 1
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+script = ExtResource("avatar")
+avatar_id = "avatar_03"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = -68.0
+offset_right = 55.0
+offset_bottom = 42.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn3"]
+layout_mode = 1
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -40.0
+offset_right = 13.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Btn4" type="Button" parent="PanelFoto/Columna/GridAvatares"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 176)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+
+[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn4"]
+layout_mode = 1
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+script = ExtResource("avatar")
+avatar_id = "avatar_04"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = -68.0
+offset_right = 55.0
+offset_bottom = 42.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn4"]
+layout_mode = 1
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -40.0
+offset_right = 13.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Btn5" type="Button" parent="PanelFoto/Columna/GridAvatares"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 176)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+
+[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn5"]
+layout_mode = 1
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+script = ExtResource("avatar")
+avatar_id = "avatar_05"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = -68.0
+offset_right = 55.0
+offset_bottom = 42.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn5"]
+layout_mode = 1
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -40.0
+offset_right = 13.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Btn6" type="Button" parent="PanelFoto/Columna/GridAvatares"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 176)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+
+[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn6"]
+layout_mode = 1
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+script = ExtResource("avatar")
+avatar_id = "avatar_06"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = -68.0
+offset_right = 55.0
+offset_bottom = 42.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn6"]
+layout_mode = 1
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -40.0
+offset_right = 13.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="E3" type="Control" parent="PanelFoto/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnUsarAvatar" type="Button" parent="PanelFoto/Columna"]
+layout_mode = 2
+text = "Usar este avatar"
+unique_name_in_owner = true
+
+[node name="BtnCancelarFoto" type="Button" parent="PanelFoto/Columna"]
+layout_mode = 2
+text = "Cancelar"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+
+[node name="PanelContrasena" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
+visible = false
+
+[node name="Columna" type="VBoxContainer" parent="PanelContrasena"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="PanelContrasena/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolverContra" type="Button" parent="PanelContrasena/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="PanelContrasena/Columna/Encabezado/BtnVolverContra"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="LblTituloBarra" type="Label" parent="PanelContrasena/Columna/Encabezado"]
+layout_mode = 2
+text = "Contraseña"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
+
+[node name="Hueco" type="Control" parent="PanelContrasena/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+
+[node name="E0" type="Control" parent="PanelContrasena/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="LblTitulo" type="Label" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "Configura una contraseña"
+theme_type_variation = &"TituloSeccion"
+autowrap_mode = 3
+
+[node name="LblSub" type="Label" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "Usa de 4 a 8 dígitos. Escríbela dos veces para confirmarla."
+theme_type_variation = &"Subtitulo"
+autowrap_mode = 3
+
+[node name="E1" type="Control" parent="PanelContrasena/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="LblEtq1" type="Label" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "NUEVA CONTRASEÑA"
+theme_type_variation = &"Etiqueta"
+
+[node name="FilaContra1" type="HBoxContainer" parent="PanelContrasena/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TxtContra1" type="LineEdit" parent="PanelContrasena/Columna/FilaContra1"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+size_flags_horizontal = 3
+max_length = 8
+secret = true
+virtual_keyboard_type = 2
+placeholder_text = "••••"
+
+[node name="BtnOjo" type="Button" parent="PanelContrasena/Columna/FilaContra1"]
+layout_mode = 2
+custom_minimum_size = Vector2(84, 84)
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="PanelContrasena/Columna/FilaContra1/BtnOjo"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -13.0
+offset_top = -13.0
+offset_right = 13.0
+offset_bottom = 13.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "ojo"
+color = Color(0.3725, 0.4039, 0.4588, 1)
+grosor = 2.5
+
+[node name="LblAyudaContra" type="Label" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "4 a 8 dígitos"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="E2" type="Control" parent="PanelContrasena/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 4)
+
+[node name="LblEtq2" type="Label" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "CONFIRMAR CONTRASEÑA"
+theme_type_variation = &"Etiqueta"
+
+[node name="TxtContra2" type="LineEdit" parent="PanelContrasena/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+max_length = 8
+secret = true
+virtual_keyboard_type = 2
+placeholder_text = "••••"
+
+[node name="LblErrorContra" type="Label" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "Las contraseñas no coinciden. Vuelve a escribirla."
+visible = false
+theme_type_variation = &"TextoNaranjaNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="E3" type="Control" parent="PanelContrasena/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnGuardarContra" type="Button" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "Guardar contraseña"
+unique_name_in_owner = true
+disabled = true
+
+[node name="BtnCancelarContra" type="Button" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "Cancelar"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true

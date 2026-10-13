@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scenes/cu02_mapa/mapa.gd" id="1_mapa"]
+[ext_resource type="Script" path="res://scenes/cu02_mapa/mapa.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Lienzo.gd" id="lienzo"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
 
 [node name="Mapa" type="Control"]
 layout_mode = 3
@@ -9,18 +11,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_mapa")
+script = ExtResource("script")
 
-[node name="Fondo" type="ColorRect" parent="."]
+[node name="Fondo" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.09, 0.1, 0.14, 1)
 
-[node name="Margen" type="MarginContainer" parent="."]
+[node name="PanelMapa" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,100 +29,206 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 60
+theme_override_constants/margin_top = 56
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 30
-
-[node name="Columna" type="VBoxContainer" parent="Margen"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
-layout_mode = 2
-
-[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
 unique_name_in_owner = true
+
+[node name="Columna" type="VBoxContainer" parent="PanelMapa"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Encabezado" type="HBoxContainer" parent="PanelMapa/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="PanelMapa/Columna/Encabezado"]
+layout_mode = 2
 custom_minimum_size = Vector2(56, 56)
-layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "<"
-flat = true
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
 
-[node name="LblTitulo" type="Label" parent="Margen/Columna/Encabezado"]
+[node name="Icono" type="Control" parent="PanelMapa/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="LblTituloBarra" type="Label" parent="PanelMapa/Columna/Encabezado"]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 30
 text = "Mapa de módulos"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
 
-[node name="LblPuntos" type="Label" parent="Margen/Columna/Encabezado"]
-unique_name_in_owner = true
-modulate = Color(1, 0.84, 0.3, 1)
+[node name="ChipPts" type="PanelContainer" parent="PanelMapa/Columna/Encabezado"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "0 pts"
+size_flags_vertical = 4
+theme_type_variation = &"Chip"
 
-[node name="LblResumen" type="Label" parent="Margen/Columna"]
-unique_name_in_owner = true
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="Fila" type="HBoxContainer" parent="PanelMapa/Columna/Encabezado/ChipPts"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "0 de 8 módulos completados · Ingeniería de Software"
-autowrap_mode = 3
+theme_override_constants/separation = 6
 
-[node name="Scroll" type="ScrollContainer" parent="Margen/Columna"]
+[node name="Icono" type="Control" parent="PanelMapa/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(18, 18)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.0
+size_flags_vertical = 4
+
+[node name="LblPuntos" type="Label" parent="PanelMapa/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+text = "340 pts"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="Resumen" type="HBoxContainer" parent="PanelMapa/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LblResumen" type="Label" parent="PanelMapa/Columna/Resumen"]
+layout_mode = 2
+text = "0 de 8 módulos completados"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="LblMateria" type="Label" parent="PanelMapa/Columna/Resumen"]
+layout_mode = 2
+text = "Ingeniería de Software"
+theme_type_variation = &"EtiquetaAzul"
+
+[node name="AreaMapa" type="Control" parent="PanelMapa/Columna"]
 layout_mode = 2
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="ListaNodos" type="VBoxContainer" parent="Margen/Columna/Scroll"]
 unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 22
 
-[node name="Leyenda" type="HBoxContainer" parent="Margen/Columna"]
-layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 30
+[node name="Conectores" type="Control" parent="PanelMapa/Columna/AreaMapa"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("lienzo")
+mouse_filter = 2
+unique_name_in_owner = true
 
-[node name="LblCompletado" type="Label" parent="Margen/Columna/Leyenda"]
-modulate = Color(0.45, 1, 0.55, 1)
+[node name="CentroLeyenda" type="CenterContainer" parent="PanelMapa/Columna"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "● Completado"
 
-[node name="LblDesbloqueado" type="Label" parent="Margen/Columna/Leyenda"]
-modulate = Color(1, 0.84, 0.3, 1)
+[node name="Leyenda" type="PanelContainer" parent="PanelMapa/Columna/CentroLeyenda"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "● Desbloqueado"
+theme_type_variation = &"ChipGris"
 
-[node name="LblBloqueado" type="Label" parent="Margen/Columna/Leyenda"]
-modulate = Color(0.5, 0.5, 0.55, 1)
+[node name="Fila" type="HBoxContainer" parent="PanelMapa/Columna/CentroLeyenda/Leyenda"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "● Bloqueado"
+theme_override_constants/separation = 18
+
+[node name="Comp" type="HBoxContainer" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Punto" type="Control" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila/Comp"]
+layout_mode = 2
+custom_minimum_size = Vector2(14, 14)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0,0,0,0)
+grosor = 0.1
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila/Comp"]
+layout_mode = 2
+text = "Completado"
+theme_type_variation = &"Pequeno"
+
+[node name="Desb" type="HBoxContainer" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Punto" type="Control" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila/Desb"]
+layout_mode = 2
+custom_minimum_size = Vector2(14, 14)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0,0,0,0)
+grosor = 0.1
+fondo = Color(0.1843, 0.3333, 0.902, 1)
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila/Desb"]
+layout_mode = 2
+text = "Desbloqueado"
+theme_type_variation = &"Pequeno"
+
+[node name="Bloq" type="HBoxContainer" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Punto" type="Control" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila/Bloq"]
+layout_mode = 2
+custom_minimum_size = Vector2(14, 14)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0,0,0,0)
+grosor = 0.1
+fondo = Color(0.7882, 0.8039, 0.851, 1)
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="PanelMapa/Columna/CentroLeyenda/Leyenda/Fila/Bloq"]
+layout_mode = 2
+text = "Bloqueado"
+theme_type_variation = &"Pequeno"
 
 [node name="PanelDetalle" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 unique_name_in_owner = true
 visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelDetalle"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_type_variation = &"Overlay"
 
-[node name="Oscuro" type="ColorRect" parent="PanelDetalle"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.6)
+[node name="BtnCerrarFondo" type="Button" parent="PanelDetalle/Overlay"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
 
-[node name="Tarjeta" type="PanelContainer" parent="PanelDetalle"]
+[node name="Hoja" type="PanelContainer" parent="PanelDetalle"]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -129,108 +236,356 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_type_variation = &"Hoja"
 
-[node name="Margen" type="MarginContainer" parent="PanelDetalle/Tarjeta"]
-layout_mode = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
-
-[node name="Columna" type="VBoxContainer" parent="PanelDetalle/Tarjeta/Margen"]
+[node name="Columna" type="VBoxContainer" parent="PanelDetalle/Hoja"]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="LblDetEncabezado" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna"]
-unique_name_in_owner = true
-modulate = Color(1, 0.84, 0.3, 1)
+[node name="CentroHandle" type="CenterContainer" parent="PanelDetalle/Hoja/Columna"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+
+[node name="Handle" type="PanelContainer" parent="PanelDetalle/Hoja/Columna/CentroHandle"]
+layout_mode = 2
+theme_type_variation = &"ChipGris"
+custom_minimum_size = Vector2(64, 6)
+
+[node name="Cabecera" type="HBoxContainer" parent="PanelDetalle/Hoja/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Textos" type="VBoxContainer" parent="PanelDetalle/Hoja/Columna/Cabecera"]
+layout_mode = 2
+theme_override_constants/separation = 4
+size_flags_horizontal = 3
+
+[node name="LblDetEncabezado" type="Label" parent="PanelDetalle/Hoja/Columna/Cabecera/Textos"]
+layout_mode = 2
 text = "MÓDULO 3 · DESBLOQUEADO"
-
-[node name="LblDetNombre" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna"]
+theme_type_variation = &"EtiquetaAzul"
 unique_name_in_owner = true
+
+[node name="LblDetNombre" type="Label" parent="PanelDetalle/Hoja/Columna/Cabecera/Textos"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 34
 text = "Requerimientos de software"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="Datos" type="HBoxContainer" parent="PanelDetalle/Tarjeta/Margen/Columna"]
+[node name="BtnCerrar" type="Button" parent="PanelDetalle/Hoja/Columna/Cabecera"]
 layout_mode = 2
+custom_minimum_size = Vector2(52, 52)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+size_flags_vertical = 0
 
-[node name="Tipo" type="VBoxContainer" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos"]
+[node name="Icono" type="Control" parent="PanelDetalle/Hoja/Columna/Cabecera/BtnCerrar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "cerrar"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="NotaCompletado" type="PanelContainer" parent="PanelDetalle/Hoja/Columna"]
 layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="PanelDetalle/Hoja/Columna/NotaCompletado"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Icono" type="Control" parent="PanelDetalle/Hoja/Columna/NotaCompletado/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(34, 34)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+size_flags_vertical = 0
+
+[node name="Lbl" type="Label" parent="PanelDetalle/Hoja/Columna/NotaCompletado/Fila"]
+layout_mode = 2
+text = "Ya superaste este módulo. Puedes volver a jugarlo; solo se guardará un nuevo intento si mejoras tu puntaje."
+size_flags_horizontal = 3
+theme_type_variation = &"TextoVerdeNormal"
+autowrap_mode = 3
+
+[node name="Tiles" type="HBoxContainer" parent="PanelDetalle/Hoja/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TileTipoP" type="PanelContainer" parent="PanelDetalle/Hoja/Columna/Tiles"]
+layout_mode = 2
+theme_type_variation = &"Tile"
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="LblDetTipo" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos/Tipo"]
-unique_name_in_owner = true
+[node name="V" type="VBoxContainer" parent="PanelDetalle/Hoja/Columna/Tiles/TileTipoP"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_constants/separation = 4
+
+[node name="IconoTile" type="Control" parent="PanelDetalle/Hoja/Columna/Tiles/TileTipoP/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "quiz"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+unique_name_in_owner = true
+size_flags_horizontal = 4
+
+[node name="LblDetTipo" type="Label" parent="PanelDetalle/Hoja/Columna/Tiles/TileTipoP/V"]
+layout_mode = 2
 text = "Quiz"
+theme_type_variation = &"TituloTarjeta"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos/Tipo"]
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="Etq" type="Label" parent="PanelDetalle/Hoja/Columna/Tiles/TileTipoP/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
 text = "Tipo de reto"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
 horizontal_alignment = 1
 
-[node name="Maximos" type="VBoxContainer" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos"]
+[node name="TileMaxP" type="PanelContainer" parent="PanelDetalle/Hoja/Columna/Tiles"]
 layout_mode = 2
+theme_type_variation = &"Tile"
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="LblDetMaximos" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos/Maximos"]
-unique_name_in_owner = true
+[node name="V" type="VBoxContainer" parent="PanelDetalle/Hoja/Columna/Tiles/TileMaxP"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_constants/separation = 4
+
+[node name="IconoTile" type="Control" parent="PanelDetalle/Hoja/Columna/Tiles/TileMaxP/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+size_flags_horizontal = 4
+
+[node name="LblDetMaximos" type="Label" parent="PanelDetalle/Hoja/Columna/Tiles/TileMaxP/V"]
+layout_mode = 2
 text = "100"
+theme_type_variation = &"TituloTarjeta"
+unique_name_in_owner = true
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos/Maximos"]
-modulate = Color(0.7, 0.7, 0.75, 1)
+[node name="Etq" type="Label" parent="PanelDetalle/Hoja/Columna/Tiles/TileMaxP/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
 text = "Puntos máximos"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
 horizontal_alignment = 1
 
-[node name="Mejor" type="VBoxContainer" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos"]
+[node name="TileMejorP" type="PanelContainer" parent="PanelDetalle/Hoja/Columna/Tiles"]
 layout_mode = 2
+theme_type_variation = &"Tile"
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="LblDetMejor" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos/Mejor"]
-unique_name_in_owner = true
+[node name="V" type="VBoxContainer" parent="PanelDetalle/Hoja/Columna/Tiles/TileMejorP"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_constants/separation = 4
+
+[node name="IconoTile" type="Control" parent="PanelDetalle/Hoja/Columna/Tiles/TileMejorP/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(26, 26)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "grafica"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+size_flags_horizontal = 4
+
+[node name="LblDetMejor" type="Label" parent="PanelDetalle/Hoja/Columna/Tiles/TileMejorP/V"]
+layout_mode = 2
 text = "—"
-horizontal_alignment = 1
-
-[node name="Label" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna/Datos/Mejor"]
-modulate = Color(0.7, 0.7, 0.75, 1)
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Mejor puntaje"
-horizontal_alignment = 1
-
-[node name="LblDetDescripcion" type="Label" parent="PanelDetalle/Tarjeta/Margen/Columna"]
+theme_type_variation = &"TituloTarjeta"
 unique_name_in_owner = true
-modulate = Color(0.8, 0.8, 0.85, 1)
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="PanelDetalle/Hoja/Columna/Tiles/TileMejorP/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+text = "Mejor puntaje"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="LblDetDescripcion" type="Label" parent="PanelDetalle/Hoja/Columna"]
+layout_mode = 2
 text = "5 preguntas sobre requerimientos funcionales y no funcionales."
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="BtnAccion" type="Button" parent="PanelDetalle/Tarjeta/Margen/Columna"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 90)
+[node name="BtnAccion" type="Button" parent="PanelDetalle/Hoja/Columna"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
 text = "Iniciar"
-
-[node name="BtnCerrar" type="Button" parent="PanelDetalle/Tarjeta/Margen/Columna"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 92)
+
+[node name="PanelBloqueado" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelBloqueado"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="BtnCerrarBloqueado" type="Button" parent="PanelBloqueado/Overlay"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Cerrar"
-flat = true
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="MargenModal" type="MarginContainer" parent="PanelBloqueado"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelBloqueado/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelBloqueado/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(620, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelBloqueado/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="IconoCandado" type="Control" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(76, 76)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "candado"
+color = Color(0.3725, 0.4039, 0.4588, 1)
+grosor = 2.5
+fondo = Color(0.9137, 0.9216, 0.9451, 1)
+
+[node name="LblBloqEncabezado" type="Label" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "MÓDULO 4 · BLOQUEADO"
+theme_type_variation = &"Etiqueta"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="LblBloqNombre" type="Label" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Modelado con UML"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="TarjetaRequisito" type="PanelContainer" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAmarilla"
+
+[node name="V" type="VBoxContainer" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Etq" type="Label" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V"]
+layout_mode = 2
+text = "PARA DESBLOQUEARLO"
+theme_type_variation = &"EtiquetaAmarilla"
+
+[node name="F1" type="HBoxContainer" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Badge" type="PanelContainer" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V/F1"]
+layout_mode = 2
+theme_type_variation = &"BadgeAzul"
+custom_minimum_size = Vector2(36, 36)
+size_flags_vertical = 0
+
+[node name="LblBloqNumero" type="Label" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V/F1/Badge"]
+layout_mode = 2
+text = "3"
+vertical_alignment = 1
+theme_type_variation = &"BadgeTexto"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="LblBloqRequisito" type="RichTextLabel" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V/F1"]
+layout_mode = 2
+unique_name_in_owner = true
+bbcode_enabled = true
+fit_content = true
+size_flags_horizontal = 3
+text = "Completa [color=#2F55E6]Módulo 3 · Requerimientos de software[/color]"
+
+[node name="F2" type="HBoxContainer" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Check" type="Control" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V/F2"]
+layout_mode = 2
+custom_minimum_size = Vector2(36, 36)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(0.0902, 0.5412, 0.298, 1)
+grosor = 2.5
+fondo = Color(1, 1, 1, 1)
+size_flags_vertical = 0
+
+[node name="LblBloqMinimo" type="RichTextLabel" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna/TarjetaRequisito/V/F2"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+size_flags_horizontal = 3
+text = "Con un puntaje mínimo de [color=#8A6400][b]70 %[/b][/color]"
+
+[node name="BtnEntendido" type="Button" parent="PanelBloqueado/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Entendido"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
