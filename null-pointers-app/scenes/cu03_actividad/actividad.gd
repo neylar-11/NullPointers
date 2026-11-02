@@ -56,7 +56,14 @@ func _ready() -> void:
 
 	%LblModulo.text = "Módulo %d · %s" % [id_modulo, _nombre_corto(modulo["nombre"])]
 	%Barra.max_value = reactivos.size()
-	_mostrar_pregunta()
+
+	# CU-04 paso 5: si venimos de la teoría, continuar en el punto donde se detuvo (paso 4)
+	var pausa: Dictionary = JuegoRepository.reto_en_pausa
+	JuegoRepository.reto_en_pausa = {}        # se consume siempre (una pausa de otro módulo se descarta)
+	if not pausa.is_empty() and int(pausa["id_modulo"]) == id_modulo:
+		_restaurar_desde_pausa(pausa)
+	else:
+		_mostrar_pregunta()
 
 
 func _nombre_corto(nombre: String) -> String:
@@ -194,11 +201,35 @@ func _on_continuar() -> void:
 
 
 func _on_ver_teoria() -> void:
-	# CU-04 (Sprint 2): cuando exista, aquí se abrirá la teoría del concepto.
-	if ResourceLoader.exists(RUTA_TEORIA):
-		get_tree().change_scene_to_file(RUTA_TEORIA)
-	else:
-		print("Pantalla pendiente (CU-04): ", RUTA_TEORIA)
+	# CU-04 paso 1: guardar el estado del reto y abrir la teoría del concepto asociado.
+	# Al regresar, _ready() restaura este estado (paso 5 del CU-04 → paso 4 del CU-03).
+	JuegoRepository.reto_en_pausa = {
+		"id_modulo": id_modulo,
+		"indice": indice,
+		"aciertos": aciertos,
+		"puntos_reto": puntos_reto,
+		"opcion_elegida": opcion_elegida,
+	}
+	JuegoRepository.reactivo_teoria = int(reactivos[indice]["id"])
+	get_tree().change_scene_to_file(RUTA_TEORIA)
+
+
+## Reconstruye la pantalla de "respuesta incorrecta" tal como estaba antes de ir a la teoría.
+func _restaurar_desde_pausa(p: Dictionary) -> void:
+	indice = int(p["indice"])
+	aciertos = int(p["aciertos"])
+	puntos_reto = int(p["puntos_reto"])
+	_mostrar_pregunta()
+	opcion_elegida = int(p["opcion_elegida"])
+	if opcion_elegida >= 0:
+		_on_enviar()        # vuelve a pintar la evaluación (misma respuesta, mismo resultado)
+		# _on_enviar sumó el acierto otra vez solo si fue correcta; desde la teoría nunca lo es,
+		# pero se protege por si acaso:
+		var r: Dictionary = reactivos[indice]
+		if opcion_elegida == int(r["respuesta_correcta"]):
+			aciertos -= 1
+			puntos_reto -= puntos_por_pregunta
+			%LblPuntosReto.text = "%d pts" % puntos_reto
 
 
 # ============================ PANTALLA DE RESULTADO ============================
@@ -247,6 +278,14 @@ func _terminar_reto() -> void:
 		_colorear_estado(false)
 		%BtnReintentar.show()
 		%BtnVolverMapa.theme_type_variation = &"BotonSecundario"
+
+	# CU-05: avisar si este intento desbloqueó insignias
+	var nuevas: Array = res.get("insignias_nuevas", [])
+	if not nuevas.is_empty():
+		var nombres: Array = []
+		for i in nuevas:
+			nombres.append(i["titulo"])
+		%LblResDetalle.text += "\nNueva insignia: %s" % ", ".join(nombres)
 
 	%LblResTotal.text = "%d pts" % res["puntos_totales"]
 	if res["puntos_sumados"] > 0:

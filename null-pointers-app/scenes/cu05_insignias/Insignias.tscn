@@ -1,0 +1,283 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu05_insignias/insignias.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Insignias" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="CentroChip" type="CenterContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LblPantalla" type="Label" parent="Margen/Columna/Encabezado/CentroChip"]
+layout_mode = 2
+text = "Insignias"
+theme_type_variation = &"Negrita"
+
+[node name="ChipContador" type="PanelContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+theme_type_variation = &"Chip"
+unique_name_in_owner = true
+size_flags_vertical = 4
+
+[node name="LblContador" type="Label" parent="Margen/Columna/Encabezado/ChipContador"]
+layout_mode = 2
+text = "3 / 9"
+theme_type_variation = &"TextoAzul"
+unique_name_in_owner = true
+
+[node name="E0" type="Control" parent="Margen/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="LblTitulo" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "Tus insignias"
+theme_type_variation = &"Titulo"
+
+[node name="LblSub" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "Toca una insignia para ver cómo se obtiene."
+theme_type_variation = &"Subtitulo"
+autowrap_mode = 3
+
+[node name="Barra" type="ProgressBar" parent="Margen/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+max_value = 9.0
+value = 3.0
+show_percentage = false
+
+[node name="AvisoVacio" type="PanelContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAzul"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="Margen/Columna/AvisoVacio"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Icono" type="Control" parent="Margen/Columna/AvisoVacio/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(40, 40)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+fondo = Color(1, 1, 1, 1)
+size_flags_vertical = 0
+
+[node name="Textos" type="VBoxContainer" parent="Margen/Columna/AvisoVacio/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="LblVacioTitulo" type="Label" parent="Margen/Columna/AvisoVacio/Fila/Textos"]
+layout_mode = 2
+text = "Aún no tienes insignias"
+theme_type_variation = &"TextoAzul"
+
+[node name="LblVacioTexto" type="Label" parent="Margen/Columna/AvisoVacio/Fila/Textos"]
+layout_mode = 2
+text = "Completa tu primer módulo para ganar la primera."
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Cuadricula" type="GridContainer" parent="Margen/Columna/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+unique_name_in_owner = true
+
+[node name="BtnJugar" type="Button" parent="Margen/Columna"]
+layout_mode = 2
+text = "Ir a jugar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+visible = false
+
+[node name="PanelDetalle" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelDetalle"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="BtnCerrarFondo" type="Button" parent="PanelDetalle/Overlay"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="MargenModal" type="MarginContainer" parent="PanelDetalle"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelDetalle/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelDetalle/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(620, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelDetalle/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="IconoDetalle" type="Control" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(130, 130)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(1, 1, 1, 1)
+grosor = 3.5
+fondo = Color(0.1843, 0.3333, 0.902, 1)
+unique_name_in_owner = true
+
+[node name="LblDetEstado" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "OBTENIDA · 12 OCT 2026"
+theme_type_variation = &"EtiquetaVerde"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="LblDetTitulo" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Puntería"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblDetDescripcion" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Descripción de la insignia."
+theme_type_variation = &"Subtitulo"
+unique_name_in_owner = true
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="TarjetaCondicion" type="PanelContainer" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaGris"
+
+[node name="V" type="VBoxContainer" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/TarjetaCondicion"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Etq" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/TarjetaCondicion/V"]
+layout_mode = 2
+text = "CONDICIÓN PARA OBTENERLA"
+theme_type_variation = &"Etiqueta"
+
+[node name="LblDetCondicion" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/TarjetaCondicion/V"]
+layout_mode = 2
+text = "Condición."
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="E" type="Control" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="BtnCerrar" type="Button" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Cerrar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
