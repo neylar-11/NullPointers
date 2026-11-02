@@ -1,0 +1,294 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu06_progreso/progreso.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Progreso" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="CentroChip" type="CenterContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LblPantalla" type="Label" parent="Margen/Columna/Encabezado/CentroChip"]
+layout_mode = 2
+text = "Mi progreso"
+theme_type_variation = &"Negrita"
+
+[node name="E" type="Control" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+
+[node name="Scroll" type="ScrollContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 14
+
+[node name="E0" type="Control" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="LblSaludo" type="Label" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+text = "Así vas, estudiante"
+theme_type_variation = &"Titulo"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Tiles" type="HBoxContainer" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TarjetaTotal" type="PanelContainer" parent="Margen/Columna/Scroll/V/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAzulFuerte"
+size_flags_horizontal = 3
+unique_name_in_owner = true
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/Scroll/V/Tiles/TarjetaTotal"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="FilaEtq" type="HBoxContainer" parent="Margen/Columna/Scroll/V/Tiles/TarjetaTotal/V"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icono" type="Control" parent="Margen/Columna/Scroll/V/Tiles/TarjetaTotal/V/FilaEtq"]
+layout_mode = 2
+custom_minimum_size = Vector2(18, 18)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(1, 1, 1, 1)
+grosor = 2.0
+size_flags_vertical = 4
+
+[node name="EtqTotal" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaTotal/V/FilaEtq"]
+layout_mode = 2
+text = "PUNTUACIÓN TOTAL"
+theme_type_variation = &"TextoBlanco"
+unique_name_in_owner = true
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="LblTotal" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaTotal/V"]
+layout_mode = 2
+text = "340"
+theme_type_variation = &"NegritaBlanca"
+unique_name_in_owner = true
+
+[node name="LblTotalSub" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaTotal/V"]
+layout_mode = 2
+text = "puntos acumulados"
+theme_type_variation = &"TextoBlanco"
+unique_name_in_owner = true
+
+[node name="TarjetaModulos" type="PanelContainer" parent="Margen/Columna/Scroll/V/Tiles"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Etq" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos/V"]
+layout_mode = 2
+text = "MÓDULOS"
+theme_type_variation = &"Etiqueta"
+
+[node name="FilaNum" type="HBoxContainer" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos/V"]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 0
+
+[node name="LblCompletados" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos/V/FilaNum"]
+layout_mode = 2
+text = "2"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
+
+[node name="LblTotalModulos" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos/V/FilaNum"]
+layout_mode = 2
+text = "/ 8"
+theme_type_variation = &"TextoTerciario"
+unique_name_in_owner = true
+size_flags_vertical = 8
+
+[node name="BarraModulos" type="ProgressBar" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos/V"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+max_value = 8.0
+value = 2.0
+show_percentage = false
+theme_type_variation = &"BarraVerde"
+
+[node name="Sub" type="Label" parent="Margen/Columna/Scroll/V/Tiles/TarjetaModulos/V"]
+layout_mode = 2
+text = "completados"
+theme_type_variation = &"Pequeno"
+
+[node name="AvisoVacio" type="PanelContainer" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAzul"
+unique_name_in_owner = true
+visible = false
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/Scroll/V/AvisoVacio"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="CentroIcono" type="CenterContainer" parent="Margen/Columna/Scroll/V/AvisoVacio/V"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="Margen/Columna/Scroll/V/AvisoVacio/V/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(64, 64)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "grafica"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.5
+fondo = Color(1, 1, 1, 1)
+
+[node name="LblVacioTitulo" type="Label" parent="Margen/Columna/Scroll/V/AvisoVacio/V"]
+layout_mode = 2
+text = "Aún no has completado retos"
+theme_type_variation = &"TextoAzul"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblVacioTexto" type="Label" parent="Margen/Columna/Scroll/V/AvisoVacio/V"]
+layout_mode = 2
+text = "Tus estadísticas aparecerán aquí cuando termines tu primer módulo."
+theme_type_variation = &"Pequeno"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CabDominados" type="HBoxContainer" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="Margen/Columna/Scroll/V/CabDominados"]
+layout_mode = 2
+text = "Conceptos dominados"
+theme_type_variation = &"TextoVerde"
+size_flags_horizontal = 3
+
+[node name="LblNumDominados" type="Label" parent="Margen/Columna/Scroll/V/CabDominados"]
+layout_mode = 2
+text = "2"
+theme_type_variation = &"Etiqueta"
+unique_name_in_owner = true
+
+[node name="ListaDominados" type="VBoxContainer" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+theme_override_constants/separation = 10
+unique_name_in_owner = true
+
+[node name="CabMejora" type="HBoxContainer" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="Margen/Columna/Scroll/V/CabMejora"]
+layout_mode = 2
+text = "Áreas de mejora"
+theme_type_variation = &"TextoNaranja"
+size_flags_horizontal = 3
+
+[node name="LblNumMejora" type="Label" parent="Margen/Columna/Scroll/V/CabMejora"]
+layout_mode = 2
+text = "1"
+theme_type_variation = &"Etiqueta"
+unique_name_in_owner = true
+
+[node name="ListaMejora" type="VBoxContainer" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+theme_override_constants/separation = 10
+unique_name_in_owner = true
+
+[node name="LblMinimo" type="Label" parent="Margen/Columna/Scroll/V"]
+layout_mode = 2
+text = "Dominado = mejor puntaje ≥ 70 %. Área de mejora = intentado con < 70 %."
+theme_type_variation = &"TextoTerciario"
+unique_name_in_owner = true
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="BtnJugar" type="Button" parent="Margen/Columna"]
+layout_mode = 2
+text = "Ir a jugar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+visible = false
+
+[node name="BtnVolverMenu" type="Button" parent="Margen/Columna"]
+layout_mode = 2
+text = "Volver al menú"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)

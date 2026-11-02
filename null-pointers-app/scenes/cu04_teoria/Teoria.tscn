@@ -1,0 +1,232 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu04_teoria/teoria.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Teoria" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="CentroChip" type="CenterContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LblPantalla" type="Label" parent="Margen/Columna/Encabezado/CentroChip"]
+layout_mode = 2
+text = "Teoría"
+theme_type_variation = &"Negrita"
+
+[node name="ChipPausa" type="PanelContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+theme_type_variation = &"ChipGris"
+size_flags_vertical = 4
+
+[node name="Fila" type="HBoxContainer" parent="Margen/Columna/Encabezado/ChipPausa"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/ChipPausa/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(18, 18)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "info"
+color = Color(0.3725, 0.4039, 0.4588, 1)
+grosor = 2.0
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="Margen/Columna/Encabezado/ChipPausa/Fila"]
+layout_mode = 2
+text = "Reto en pausa"
+theme_type_variation = &"Pequeno"
+
+[node name="PanelConcepto" type="ScrollContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+unique_name_in_owner = true
+horizontal_scroll_mode = 0
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelConcepto"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 14
+
+[node name="E0" type="Control" parent="Margen/Columna/PanelConcepto/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="LblEtiqueta" type="Label" parent="Margen/Columna/PanelConcepto/V"]
+layout_mode = 2
+text = "CONCEPTO · MÓDULO 3 · REQUERIMIENTOS"
+theme_type_variation = &"EtiquetaAzul"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="LblTitulo" type="Label" parent="Margen/Columna/PanelConcepto/V"]
+layout_mode = 2
+text = "Requerimientos no funcionales"
+theme_type_variation = &"Titulo"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Tarjeta" type="PanelContainer" parent="Margen/Columna/PanelConcepto/V"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelConcepto/V/Tarjeta"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LblExplicacion" type="Label" parent="Margen/Columna/PanelConcepto/V/Tarjeta/V"]
+layout_mode = 2
+text = "Explicación del concepto."
+theme_type_variation = &"Subtitulo"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="EtqClaves" type="Label" parent="Margen/Columna/PanelConcepto/V/Tarjeta/V"]
+layout_mode = 2
+text = "Ideas clave"
+theme_type_variation = &"Etiqueta"
+
+[node name="Claves" type="HFlowContainer" parent="Margen/Columna/PanelConcepto/V/Tarjeta/V"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+unique_name_in_owner = true
+
+[node name="TarjetaTruco" type="PanelContainer" parent="Margen/Columna/PanelConcepto/V/Tarjeta/V"]
+layout_mode = 2
+theme_type_variation = &"TarjetaGris"
+
+[node name="LblTruco" type="Label" parent="Margen/Columna/PanelConcepto/V/Tarjeta/V/TarjetaTruco"]
+layout_mode = 2
+text = "Truco rápido: ..."
+theme_type_variation = &"Pequeno"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="PanelNoDisponible" type="VBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+unique_name_in_owner = true
+visible = false
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="CentroIcono" type="CenterContainer" parent="Margen/Columna/PanelNoDisponible"]
+layout_mode = 2
+
+[node name="Caja" type="PanelContainer" parent="Margen/Columna/PanelNoDisponible/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 120)
+theme_type_variation = &"CajaIconoGris"
+
+[node name="Icono" type="Control" parent="Margen/Columna/PanelNoDisponible/CentroIcono/Caja"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "libro"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 3.0
+
+[node name="LblNoTitulo" type="Label" parent="Margen/Columna/PanelNoDisponible"]
+layout_mode = 2
+text = "Contenido no disponible"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblNoTexto" type="Label" parent="Margen/Columna/PanelNoDisponible"]
+layout_mode = 2
+text = "Esta pregunta aún no tiene un concepto de teoría asociado. Puedes continuar con el reto sin cambios."
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Aviso" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Icono" type="Control" parent="Margen/Columna/Aviso"]
+layout_mode = 2
+custom_minimum_size = Vector2(20, 20)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "info"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.0
+size_flags_vertical = 4
+
+[node name="Lbl" type="Label" parent="Margen/Columna/Aviso"]
+layout_mode = 2
+text = "Tu puntaje y tu intento no cambian al consultar la teoría."
+theme_type_variation = &"TextoTerciario"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+autowrap_mode = 3
+
+[node name="BtnVolverReto" type="Button" parent="Margen/Columna"]
+layout_mode = 2
+text = "Volver al reto"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
