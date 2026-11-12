@@ -7,6 +7,11 @@
 #   → >= 70 %: módulo completado + siguiente desbloqueado / < 70 %: reintentar
 #
 # El mapa (CU-02) pone JuegoRepository.modulo_seleccionado = id ANTES de abrir esta escena.
+#
+# Sprint 3:
+#   CU-09: cada respuesta incorrecta se registra en la lista de errores (JuegoRepository.registrar_error).
+#   CU-10: botón "Pista" antes de enviar: "Recordar el concepto" (25 %) y "Descartar una opción" (50 %).
+#          Los descuentos se aplican a los puntos de la pregunta y el intento registra las pistas usadas.
 extends Control
 
 const RUTA_MAPA   := "res://scenes/cu02_mapa/Mapa.tscn"
@@ -28,6 +33,14 @@ var puntos_por_pregunta := 20
 var opcion_elegida := -1
 var opciones: Array[PanelContainer] = []
 
+# --- CU-10: estado de las pistas ---
+var pistas_permitidas := true          # false en módulos tipo puzzle (flujo alternativo 5)
+var pistas_intento := 0                # total de pistas usadas en este intento (postcondición)
+var puntos_pregunta := 20              # puntos que aún puede ganar la pregunta actual (con descuentos)
+var pista_recordar_usada := false      # "Recordar el concepto" ya se usó en esta pregunta
+var opcion_descartada := -1            # índice descartado por "Descartar una opción" (-1 = ninguna)
+var restaurando := false               # true mientras se reconstruye la pantalla al volver de la teoría
+
 
 func _ready() -> void:
 	for i in 4:
@@ -43,6 +56,7 @@ func _ready() -> void:
 		_volver_al_mapa()
 		return
 	puntos_por_pregunta = int(modulo["puntos_maximos"]) / reactivos.size()
+	pistas_permitidas = modulo["tipo"] != "puzzle"      # CU-10 alt. 5: sin pistas en puzzles
 
 	# --- Botones ---
 	%BtnEnviar.pressed.connect(_on_enviar)
@@ -53,8 +67,16 @@ func _ready() -> void:
 	%BtnSalirConfirmar.pressed.connect(_volver_al_mapa)
 	%BtnReintentar.pressed.connect(_on_reintentar)
 	%BtnVolverMapa.pressed.connect(_volver_al_mapa)
+	# CU-10
+	%BtnPista.pressed.connect(_on_pista)
+	%BtnCerrarPista.pressed.connect(%PanelPista.hide)
+	%BtnCerrarPistaFondo.pressed.connect(%PanelPista.hide)
+	%BtnPistaRecordar.pressed.connect(_on_pista_recordar)
+	%BtnPistaDescartar.pressed.connect(_on_pista_descartar)
+	%BtnPista.visible = pistas_permitidas
 
-	%LblModulo.text = "Módulo %d · %s" % [id_modulo, _nombre_corto(modulo["nombre"])]
+	var materia := JuegoRepository.obtener_materia(int(modulo.get("id_materia", 1)))
+	%LblModulo.text = "%s · %s" % [materia.get("corto", "Módulo %d" % id_modulo), _nombre_corto(modulo["nombre"])]
 	%Barra.max_value = reactivos.size()
 
 	# CU-04 paso 5: si venimos de la teoría, continuar en el punto donde se detuvo (paso 4)
@@ -93,8 +115,16 @@ func _mostrar_pregunta() -> void:
 	opcion_elegida = -1
 	%PanelRetro.hide()
 	%BotonesRetro.hide()
-	%BtnEnviar.show()
+	%BotonesPregunta.show()
 	%BtnEnviar.disabled = true
+
+	# CU-10: cada pregunta inicia con todos sus puntos y sin pistas
+	puntos_pregunta = puntos_por_pregunta
+	pista_recordar_usada = false
+	opcion_descartada = -1
+	%PanelPistaTexto.hide()
+	%BtnPista.disabled = false
+	%BtnPista.text = "Pista"
 
 
 ## Estilo visual de una opción: normal | seleccionada | correcta | incorrecta | apagada
@@ -129,19 +159,101 @@ func _estilo_opcion(i: int, estado: String) -> void:
 			op.theme_type_variation = &"Opcion"
 			radio.hide()
 			lbl.theme_type_variation = &"TextoSecundario"
+		"descartada":     # CU-10: opción eliminada por la pista "Descartar una opción"
+			op.theme_type_variation = &"Opcion"
+			radio.hide()
+			marca.tipo = "cerrar"; marca.color = GRIS; marca.show()
+			tag.text = "DESCARTADA"; tag.theme_type_variation = &"Etiqueta"; tag.show()
+			lbl.theme_type_variation = &"TextoTerciario"
 		_:
 			op.theme_type_variation = &"Opcion"
 			radio.tipo = "radio"; radio.color = GRIS; radio.show()
 			lbl.theme_type_variation = &"Negrita"
+			tag.text = "CORRECTA"; tag.theme_type_variation = &"EtiquetaVerde"
 
 
 func _on_opcion_presionada(i: int) -> void:
-	if opcion_elegida == i:
+	if opcion_elegida == i or i == opcion_descartada:
 		return
 	for j in opciones.size():
+		if j == opcion_descartada:
+			continue
 		_estilo_opcion(j, "seleccionada" if j == i else "normal")
 	opcion_elegida = i
 	%BtnEnviar.disabled = false
+
+
+# =============================== CU-10: PISTAS ===============================
+## Paso 1-2: "Pista" muestra las dos opciones con su costo en puntos.
+func _on_pista() -> void:
+	var r: Dictionary = reactivos[indice]
+	var id_reactivo := int(r["id"])
+	var costo_recordar := int(round(puntos_por_pregunta * JuegoRepository.costo_pista("recordar")))
+	var costo_descartar := int(round(puntos_por_pregunta * JuegoRepository.costo_pista("descartar")))
+	%LblPistaValor.text = "Esta pregunta vale %d pts" % puntos_pregunta
+
+	# Alt. 2: sin concepto asociado → "Recordar el concepto" no está disponible
+	var hay_concepto := JuegoRepository.texto_pista_concepto(id_reactivo) != ""
+	# Alt. 3: pregunta de dos opciones → "Descartar una opción" no está disponible
+	var hay_descartable: bool = r["opciones"].size() > 2
+	# Alt. 1: segunda pista → solo se ofrece la que falta
+	var recordar_disp := hay_concepto and not pista_recordar_usada
+	var descartar_disp: bool = hay_descartable and opcion_descartada < 0
+
+	%TarjetaRecordar.visible = recordar_disp
+	%TarjetaDescartar.visible = descartar_disp
+	%LblRecordarSub.text = "Una frase del concepto asociado · cuesta 25 %% (−%d pts)" % costo_recordar
+	%LblDescartarSub.text = "Elimina una respuesta incorrecta · cuesta 50 %% (−%d pts)" % costo_descartar
+	if not recordar_disp and not descartar_disp:
+		%LblPistaNota.text = "Ya no hay pistas disponibles para esta pregunta."
+	elif not hay_concepto:
+		%LblPistaNota.text = "Esta pregunta no tiene concepto asociado; solo puedes descartar una opción."
+	elif not hay_descartable:
+		%LblPistaNota.text = "Pregunta de dos opciones: no se puede descartar ninguna."
+	else:
+		%LblPistaNota.text = "Los descuentos se acumulan. Completar un módulo sin pistas da la insignia \"Sin ayuda\"."
+	%PanelPista.show()
+
+
+## Paso 3-4: aplica la pista, resta el costo y lo indica en pantalla.
+func _aplicar_costo(tipo: String) -> void:
+	var costo := int(round(puntos_por_pregunta * JuegoRepository.costo_pista(tipo)))
+	puntos_pregunta = maxi(puntos_pregunta - costo, 0)
+	pistas_intento += 1
+	%LblEstado.text = "Esta pregunta ahora vale %d pts" % puntos_pregunta
+	%BtnPista.text = "Pista (%d)" % _pistas_en_pregunta()
+	if _pistas_en_pregunta() >= 2:
+		%BtnPista.disabled = true        # Alt. 1: con las dos usadas, el botón se deshabilita
+	%PanelPista.hide()
+
+
+func _pistas_en_pregunta() -> int:
+	return int(pista_recordar_usada) + int(opcion_descartada >= 0)
+
+
+func _on_pista_recordar() -> void:
+	var texto := JuegoRepository.texto_pista_concepto(int(reactivos[indice]["id"]))
+	if texto == "" or pista_recordar_usada:
+		return
+	pista_recordar_usada = true
+	%LblPistaTexto.text = texto
+	%PanelPistaTexto.show()
+	_aplicar_costo("recordar")
+
+
+func _on_pista_descartar() -> void:
+	if opcion_descartada >= 0:
+		return
+	var idx := JuegoRepository.opcion_a_descartar(int(reactivos[indice]["id"]))
+	if idx < 0:
+		return
+	opcion_descartada = idx
+	_estilo_opcion(idx, "descartada")
+	opciones[idx].get_node("BtnOpcion%d" % (idx + 1)).disabled = true
+	if opcion_elegida == idx:            # si justo tenía seleccionada la descartada, se deselecciona
+		opcion_elegida = -1
+		%BtnEnviar.disabled = true
+	_aplicar_costo("descartar")
 
 
 func _on_enviar() -> void:
@@ -157,17 +269,22 @@ func _on_enviar() -> void:
 			_estilo_opcion(i, "correcta" if acierto else "correcta_tag")
 		elif i == opcion_elegida:
 			_estilo_opcion(i, "incorrecta")
+		elif i == opcion_descartada:
+			_estilo_opcion(i, "descartada")
 		else:
 			_estilo_opcion(i, "apagada")
 
 	if acierto:
 		aciertos += 1
-		puntos_reto += puntos_por_pregunta
+		puntos_reto += puntos_pregunta             # CU-10 paso 6: se suman los puntos ya reducidos
 		%PanelRetro.theme_type_variation = &"TarjetaVerde"
 		%IconoRetro.tipo = "check"; %IconoRetro.fondo = VERDE
 		%LblRetroTitulo.text = "¡Correcto!"
 		%LblRetroTitulo.theme_type_variation = &"TextoVerde"
-		%LblRetroTexto.text = "+%d puntos sumados al reto" % puntos_por_pregunta
+		if puntos_pregunta < puntos_por_pregunta:
+			%LblRetroTexto.text = "+%d puntos sumados al reto (%d de %d por las pistas)" % [puntos_pregunta, puntos_pregunta, puntos_por_pregunta]
+		else:
+			%LblRetroTexto.text = "+%d puntos sumados al reto" % puntos_pregunta
 		%LblRetroTexto.theme_type_variation = &"TextoVerdeNormal"
 		%ChipPts.theme_type_variation = &"ChipVerde"
 		%BtnVerTeoria.hide()
@@ -179,6 +296,8 @@ func _on_enviar() -> void:
 		%LblRetroTexto.text = r["retroalimentacion"]
 		%LblRetroTexto.theme_type_variation = &"TextoNaranjaNormal"
 		%BtnVerTeoria.show()           # flujo alternativo → CU-04
+		if not restaurando:
+			JuegoRepository.registrar_error(int(r["id"]))     # CU-09: entra a la lista de errores
 
 	%LblPuntosReto.text = "%d pts" % puntos_reto
 	%LblEstado.text = "Evaluada"
@@ -187,7 +306,8 @@ func _on_enviar() -> void:
 		%BtnContinuar.text = "Ver resultado" if es_ultima else "Siguiente pregunta"
 	else:
 		%BtnContinuar.text = "Ver resultado" if es_ultima else "Continuar"
-	%BtnEnviar.hide()
+	%BotonesPregunta.hide()
+	%PanelPista.hide()
 	%PanelRetro.show()
 	%BotonesRetro.show()
 
@@ -209,6 +329,11 @@ func _on_ver_teoria() -> void:
 		"aciertos": aciertos,
 		"puntos_reto": puntos_reto,
 		"opcion_elegida": opcion_elegida,
+		# CU-10: el estado de las pistas también se conserva
+		"pistas_intento": pistas_intento,
+		"puntos_pregunta": puntos_pregunta,
+		"pista_recordar_usada": pista_recordar_usada,
+		"opcion_descartada": opcion_descartada,
 	}
 	JuegoRepository.reactivo_teoria = int(reactivos[indice]["id"])
 	get_tree().change_scene_to_file(RUTA_TEORIA)
@@ -216,10 +341,18 @@ func _on_ver_teoria() -> void:
 
 ## Reconstruye la pantalla de "respuesta incorrecta" tal como estaba antes de ir a la teoría.
 func _restaurar_desde_pausa(p: Dictionary) -> void:
+	restaurando = true
 	indice = int(p["indice"])
 	aciertos = int(p["aciertos"])
 	puntos_reto = int(p["puntos_reto"])
 	_mostrar_pregunta()
+	pistas_intento = int(p.get("pistas_intento", 0))
+	puntos_pregunta = int(p.get("puntos_pregunta", puntos_por_pregunta))
+	pista_recordar_usada = bool(p.get("pista_recordar_usada", false))
+	opcion_descartada = int(p.get("opcion_descartada", -1))
+	if pista_recordar_usada:
+		%LblPistaTexto.text = JuegoRepository.texto_pista_concepto(int(reactivos[indice]["id"]))
+		%PanelPistaTexto.show()
 	opcion_elegida = int(p["opcion_elegida"])
 	if opcion_elegida >= 0:
 		_on_enviar()        # vuelve a pintar la evaluación (misma respuesta, mismo resultado)
@@ -228,17 +361,19 @@ func _restaurar_desde_pausa(p: Dictionary) -> void:
 		var r: Dictionary = reactivos[indice]
 		if opcion_elegida == int(r["respuesta_correcta"]):
 			aciertos -= 1
-			puntos_reto -= puntos_por_pregunta
+			puntos_reto -= puntos_pregunta
 			%LblPuntosReto.text = "%d pts" % puntos_reto
+	restaurando = false
 
 
 # ============================ PANTALLA DE RESULTADO ============================
 func _terminar_reto() -> void:
 	# Pasos 5-7 del SRS: mostrar resultado, guardar intento, actualizar perfil, desbloquear
-	var res := JuegoRepository.registrar_intento(id_modulo, aciertos)
+	# CU-10: los puntos del intento ya traen los descuentos; se registran las pistas usadas
+	var res := JuegoRepository.registrar_intento(id_modulo, aciertos, puntos_reto, pistas_intento)
 	var completado: bool = res["completado"]
 
-	%LblResModulo.text = "Módulo %d · %s" % [id_modulo, modulo["nombre"]]
+	%LblResModulo.text = "%s · %s" % [%LblModulo.text.get_slice(" · ", 0), modulo["nombre"]]
 	%LblResPorcentaje.text = "%d %%" % res["porcentaje"]
 	%Anillo.porcentaje = res["porcentaje"]
 	%Anillo.color = VERDE if completado else NARANJA
@@ -254,11 +389,16 @@ func _terminar_reto() -> void:
 		%LblResEstado.text = "Módulo completado"
 		%LblResDetalle.text = "Alcanzaste el mínimo de %d %%" % JuegoRepository.PORCENTAJE_MINIMO
 		var sig: Dictionary = res["siguiente_desbloqueado"]
-		%F2.visible = not sig.is_empty()
+		%F2.visible = not sig.is_empty() or bool(res.get("practica_desbloqueada", false))
 		if not sig.is_empty():
 			%IconoEstado2.tipo = "candado"; %IconoEstado2.color = VERDE
 			%LblResSiguiente.text = "Siguiente módulo desbloqueado"
-			%LblResSiguienteDet.text = "Módulo %d · %s" % [int(sig["id"]), sig["nombre"]]
+			%LblResSiguienteDet.text = sig["nombre"]
+		elif res.get("practica_desbloqueada", false):
+			# CU-11 paso 1: se desbloqueó el nodo final "Práctica de ingeniero" de la materia
+			%IconoEstado2.tipo = "puzzle"; %IconoEstado2.color = VERDE
+			%LblResSiguiente.text = "¡Práctica de ingeniero desbloqueada!"
+			%LblResSiguienteDet.text = "Completaste todos los módulos de la materia. Búscala al final del mapa."
 		_colorear_estado(true)
 		%BtnReintentar.hide()
 		%BtnVolverMapa.theme_type_variation = &""
@@ -278,6 +418,10 @@ func _terminar_reto() -> void:
 		_colorear_estado(false)
 		%BtnReintentar.show()
 		%BtnVolverMapa.theme_type_variation = &"BotonSecundario"
+
+	# CU-10: el resumen indica cuántas pistas se usaron
+	if pistas_intento > 0:
+		%LblResDetalle.text += "\nPistas usadas: %d" % pistas_intento
 
 	# CU-05: avisar si este intento desbloqueó insignias
 	var nuevas: Array = res.get("insignias_nuevas", [])
@@ -312,6 +456,7 @@ func _on_reintentar() -> void:
 	indice = 0
 	aciertos = 0
 	puntos_reto = 0
+	pistas_intento = 0
 	%PanelResultado.hide()
 	%PanelPregunta.show()
 	_mostrar_pregunta()

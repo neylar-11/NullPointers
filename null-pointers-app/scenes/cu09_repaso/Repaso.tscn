@@ -1,0 +1,413 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu09_repaso/repaso.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Repaso" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="CentroChip" type="CenterContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LblPantalla" type="Label" parent="Margen/Columna/Encabezado/CentroChip"]
+layout_mode = 2
+text = "Repasar mis errores"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="ChipContador" type="PanelContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ChipGris"
+unique_name_in_owner = true
+
+[node name="LblContador" type="Label" parent="Margen/Columna/Encabezado/ChipContador"]
+layout_mode = 2
+text = "0"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="PanelLista" type="VBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+unique_name_in_owner = true
+
+[node name="LblTitulo" type="Label" parent="Margen/Columna/PanelLista"]
+layout_mode = 2
+text = "Tienes 4 preguntas por repasar"
+theme_type_variation = &"Titulo"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="LblSub" type="Label" parent="Margen/Columna/PanelLista"]
+layout_mode = 2
+text = "Las preguntas que fallaste en los retos. Cada una que aciertes aquí sale de la lista. El repaso no da puntos ni cambia tu mejor puntaje."
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="AvisoVacio" type="PanelContainer" parent="Margen/Columna/PanelLista"]
+layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
+unique_name_in_owner = true
+visible = false
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelLista/AvisoVacio"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="CentroIcono" type="CenterContainer" parent="Margen/Columna/PanelLista/AvisoVacio/V"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="Margen/Columna/PanelLista/AvisoVacio/V/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(64, 64)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+
+[node name="LblVacioTitulo" type="Label" parent="Margen/Columna/PanelLista/AvisoVacio/V"]
+layout_mode = 2
+text = "No tienes errores por repasar"
+theme_type_variation = &"TextoVerde"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblVacioTexto" type="Label" parent="Margen/Columna/PanelLista/AvisoVacio/V"]
+layout_mode = 2
+text = "Cuando falles una pregunta en un reto aparecerá aquí para que la repases."
+theme_type_variation = &"TextoVerdeNormal"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Margen/Columna/PanelLista"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ListaMaterias" type="VBoxContainer" parent="Margen/Columna/PanelLista/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+
+[node name="BtnIniciar" type="Button" parent="Margen/Columna/PanelLista"]
+layout_mode = 2
+text = "Iniciar repaso (todas)"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+
+[node name="BtnVolverMenu" type="Button" parent="Margen/Columna/PanelLista"]
+layout_mode = 2
+text = "Volver"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+
+[node name="PanelPregunta" type="VBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+unique_name_in_owner = true
+visible = false
+
+[node name="Progreso" type="HBoxContainer" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LblProgreso" type="Label" parent="Margen/Columna/PanelPregunta/Progreso"]
+layout_mode = 2
+text = "Pregunta 1 de 4"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="LblOrigen" type="Label" parent="Margen/Columna/PanelPregunta/Progreso"]
+layout_mode = 2
+text = "INTRO · REQUERIMIENTOS"
+theme_type_variation = &"EtiquetaAzul"
+unique_name_in_owner = true
+
+[node name="Barra" type="ProgressBar" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+max_value = 5.0
+value = 1.0
+show_percentage = false
+
+[node name="TarjetaPregunta" type="PanelContainer" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelPregunta/TarjetaPregunta"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etq" type="Label" parent="Margen/Columna/PanelPregunta/TarjetaPregunta/V"]
+layout_mode = 2
+text = "REPASO · SIN PUNTOS"
+theme_type_variation = &"EtiquetaNaranja"
+
+[node name="LblPregunta" type="Label" parent="Margen/Columna/PanelPregunta/TarjetaPregunta/V"]
+layout_mode = 2
+text = "¿Cuál de estos es un requerimiento no funcional?"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Opciones" type="VBoxContainer" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+
+[node name="PanelRetro" type="PanelContainer" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="Margen/Columna/PanelPregunta/PanelRetro"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="IconoRetro" type="Control" parent="Margen/Columna/PanelPregunta/PanelRetro/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(40, 40)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+unique_name_in_owner = true
+size_flags_vertical = 0
+
+[node name="Textos" type="VBoxContainer" parent="Margen/Columna/PanelPregunta/PanelRetro/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 4
+size_flags_horizontal = 3
+
+[node name="LblRetroTitulo" type="Label" parent="Margen/Columna/PanelPregunta/PanelRetro/Fila/Textos"]
+layout_mode = 2
+text = "¡Correcto!"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="LblRetroTexto" type="Label" parent="Margen/Columna/PanelPregunta/PanelRetro/Fila/Textos"]
+layout_mode = 2
+text = "La pregunta sale de tu lista de errores."
+theme_type_variation = &"TextoVerdeNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="E" type="Control" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnEnviar" type="Button" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+text = "Enviar respuesta"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+disabled = true
+
+[node name="BotonesRetro" type="HBoxContainer" parent="Margen/Columna/PanelPregunta"]
+layout_mode = 2
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+visible = false
+
+[node name="BtnVerTeoria" type="Button" parent="Margen/Columna/PanelPregunta/BotonesRetro"]
+layout_mode = 2
+text = "Ver teoría"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+
+[node name="BtnContinuar" type="Button" parent="Margen/Columna/PanelPregunta/BotonesRetro"]
+layout_mode = 2
+text = "Continuar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+
+[node name="PanelResultado" type="VBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+unique_name_in_owner = true
+visible = false
+
+[node name="LblResTitulo" type="Label" parent="Margen/Columna/PanelResultado"]
+layout_mode = 2
+text = "Repaso terminado"
+theme_type_variation = &"Titulo"
+horizontal_alignment = 1
+unique_name_in_owner = true
+
+[node name="Tiles" type="HBoxContainer" parent="Margen/Columna/PanelResultado"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="T1" type="PanelContainer" parent="Margen/Columna/PanelResultado/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TileBlanco"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelResultado/Tiles/T1"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LblResRepasadas" type="Label" parent="Margen/Columna/PanelResultado/Tiles/T1/V"]
+layout_mode = 2
+text = "4"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="Margen/Columna/PanelResultado/Tiles/T1/V"]
+layout_mode = 2
+text = "Repasadas"
+theme_type_variation = &"Pequeno"
+horizontal_alignment = 1
+
+[node name="T2" type="PanelContainer" parent="Margen/Columna/PanelResultado/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TileVerde"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelResultado/Tiles/T2"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LblResAciertos" type="Label" parent="Margen/Columna/PanelResultado/Tiles/T2/V"]
+layout_mode = 2
+text = "3"
+theme_type_variation = &"NumeroVerde"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="Margen/Columna/PanelResultado/Tiles/T2/V"]
+layout_mode = 2
+text = "Aciertos"
+theme_type_variation = &"Pequeno"
+horizontal_alignment = 1
+
+[node name="T3" type="PanelContainer" parent="Margen/Columna/PanelResultado/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TileBlanco"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="Margen/Columna/PanelResultado/Tiles/T3"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LblResSalieron" type="Label" parent="Margen/Columna/PanelResultado/Tiles/T3/V"]
+layout_mode = 2
+text = "3"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="Margen/Columna/PanelResultado/Tiles/T3/V"]
+layout_mode = 2
+text = "Salieron de la lista"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="PanelEstado" type="PanelContainer" parent="Margen/Columna/PanelResultado"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAzul"
+unique_name_in_owner = true
+
+[node name="LblResDetalle" type="Label" parent="Margen/Columna/PanelResultado/PanelEstado"]
+layout_mode = 2
+text = "Te quedan 1 pregunta por repasar."
+theme_type_variation = &"TextoAzul"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="E" type="Control" parent="Margen/Columna/PanelResultado"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BtnOtroRepaso" type="Button" parent="Margen/Columna/PanelResultado"]
+layout_mode = 2
+text = "Repasar de nuevo"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+
+[node name="BtnIrProgreso" type="Button" parent="Margen/Columna/PanelResultado"]
+layout_mode = 2
+text = "Ir a Mi progreso"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)

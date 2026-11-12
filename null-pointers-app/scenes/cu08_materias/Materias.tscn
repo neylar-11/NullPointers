@@ -1,0 +1,130 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu08_materias/materias.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Materias" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="LblTituloBarra" type="Label" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+text = "Materias"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
+
+[node name="ChipPts" type="PanelContainer" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"Chip"
+
+[node name="Fila" type="HBoxContainer" parent="Margen/Columna/Encabezado/ChipPts"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(18, 18)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.0
+size_flags_vertical = 4
+
+[node name="LblPuntos" type="Label" parent="Margen/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+text = "0 pts"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="LblTitulo" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "¿Qué quieres practicar hoy?"
+theme_type_variation = &"Titulo"
+autowrap_mode = 3
+
+[node name="LblSub" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "Cada materia tiene su propio mapa de módulos. Completa todos para desbloquear la práctica de ingeniero."
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Lista" type="VBoxContainer" parent="Margen/Columna/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 14
+unique_name_in_owner = true
+
+[node name="LblAyuda" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "El desbloqueo de módulos es independiente en cada materia"
+theme_type_variation = &"TextoTerciario"
+horizontal_alignment = 1
+autowrap_mode = 3

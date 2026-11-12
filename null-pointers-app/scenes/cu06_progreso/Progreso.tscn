@@ -279,6 +279,13 @@ unique_name_in_owner = true
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="BtnRepaso" type="Button" parent="Margen/Columna"]
+layout_mode = 2
+text = "Repasar mis errores (0)"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+visible = false
+
 [node name="BtnJugar" type="Button" parent="Margen/Columna"]
 layout_mode = 2
 text = "Ir a jugar"
