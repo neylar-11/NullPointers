@@ -2,17 +2,24 @@
 # Base de datos local (Autoload / Singleton) de NullPointers-AppGamificada.
 # Persiste en user:// (memoria interna de la app) como JSON → 100 % offline (RNF-01, RNF-02).
 #
-# Tablas (SDS): perfil_jugador, modulos, reactivos, intentos_modulo, conceptos, insignias
+# Tablas (SDS): perfil_jugador, materias, modulos, reactivos, intentos_modulo, conceptos,
+#               insignias, errores (CU-09), practicas e intentos_practica (CU-11)
 # Casos de uso cubiertos: CU-01 (perfil), CU-02 (mapa), CU-03 (actividad),
-#                         CU-04 (teoría), CU-05 (insignias), CU-06 (progreso)
+#                         CU-04 (teoría), CU-05 (insignias), CU-06 (progreso),
+#                         CU-08 (materias), CU-09 (repaso de errores),
+#                         CU-10 (pistas), CU-11 (práctica de ingeniero)
 #
 # Uso desde cualquier escena:
 #   JuegoRepository.crear_perfil("estudiante_7421")
-#   JuegoRepository.obtener_modulos()
+#   JuegoRepository.obtener_materias()               # CU-08
+#   JuegoRepository.obtener_modulos(id_materia)      # CU-02 / CU-08
 #   JuegoRepository.registrar_intento(3, 4)   # módulo 3, 4 aciertos de 5
 #   JuegoRepository.obtener_concepto(id_reactivo)   # CU-04
 #   JuegoRepository.obtener_insignias()             # CU-05
 #   JuegoRepository.obtener_progreso()              # CU-06
+#   JuegoRepository.obtener_errores_pendientes()    # CU-09
+#   JuegoRepository.costo_pista("recordar")         # CU-10
+#   JuegoRepository.obtener_practica(id_materia)    # CU-11
 
 extends Node
 
@@ -21,6 +28,14 @@ const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mo
 
 var bd: Dictionary = {}
 var modulo_seleccionado: int = 1      # lo pone el mapa (CU-02) antes de abrir la actividad
+## CU-08: materia cuyo mapa se muestra (la pone la pantalla de materias antes de abrir el mapa).
+var materia_seleccionada: int = 1
+## CU-11: materia cuya práctica se va a resolver (la pone el mapa antes de abrir la práctica).
+var practica_materia: int = 1
+## CU-09: estado de la sesión de repaso mientras se consulta la teoría (CU-04). Vacío = ninguna.
+var repaso_en_pausa: Dictionary = {}
+## CU-04: escena a la que debe regresar la teoría ("" = al reto en pausa o al mapa).
+var teoria_regreso: String = ""
 
 ## CU-04: la actividad (CU-03) deja aquí su estado antes de abrir la teoría,
 ## para regresar exactamente al punto donde se detuvo (paso 4 del CU-03).
@@ -56,6 +71,7 @@ func cargar_bd() -> void:
 			if not bd.has("conceptos"): bd["conceptos"] = inicial["conceptos"]
 			if not bd.has("insignias"): bd["insignias"] = inicial["insignias"]
 			if not bd.has("teoria_consultas"): bd["teoria_consultas"] = 0
+			_migrar_sprint3(inicial)
 			evaluar_insignias()
 			return
 	# Primera vez (o archivo corrupto): crear BD inicial
@@ -71,6 +87,137 @@ func guardar_bd() -> void:
 func reiniciar_bd() -> void:
 	bd = _bd_inicial()
 	guardar_bd()
+
+
+## Sprint 3: lleva una BD de Sprint 1/2 al esquema con materias, errores,
+## pistas y prácticas SIN perder el progreso ya guardado.
+func _migrar_sprint3(inicial: Dictionary) -> void:
+	# CU-08: catálogo de materias y módulos nuevos (los 8 originales son de la materia 1)
+	if not bd.has("materias"):
+		bd["materias"] = inicial["materias"]
+		bd["ultima_materia"] = 1
+	for m in bd["modulos"]:
+		if not m.has("id_materia"):
+			m["id_materia"] = 1
+	for m_ini in inicial["modulos"]:
+		if obtener_modulo(int(m_ini["id"])).is_empty():
+			bd["modulos"].append(m_ini)
+	# Reactivos y conceptos no guardan progreso: se completan con los nuevos
+	for r in inicial["reactivos"]:
+		if obtener_reactivo(int(r["id"])).is_empty():
+			bd["reactivos"].append(r)
+	for c in inicial["conceptos"]:
+		var existe := false
+		for c2 in bd["conceptos"]:
+			if c2["id"] == c["id"]:
+				existe = true
+				break
+		if not existe:
+			bd["conceptos"].append(c)
+	# CU-05: insignias nuevas y textos actualizados (se conserva si ya se obtuvo)
+	for ins_ini in inicial["insignias"]:
+		var encontrada: Dictionary = {}
+		for ins in bd["insignias"]:
+			if ins["id"] == ins_ini["id"]:
+				encontrada = ins
+				break
+		if encontrada.is_empty():
+			bd["insignias"].append(ins_ini)
+		else:
+			encontrada["titulo"] = ins_ini["titulo"]
+			encontrada["descripcion"] = ins_ini["descripcion"]
+			encontrada["condicion"] = ins_ini["condicion"]
+	# CU-09 / CU-10 / CU-11
+	if not bd.has("errores"): bd["errores"] = []
+	for i in bd["intentos_modulo"]:
+		if not i.has("pistas"): i["pistas"] = 0
+	if not bd.has("practicas"): bd["practicas"] = inicial["practicas"]
+	if not bd.has("intentos_practica"): bd["intentos_practica"] = []
+	guardar_bd()
+
+
+# =====================================================================
+#  CU-08: ELEGIR MATERIA
+# =====================================================================
+func obtener_materias() -> Array:
+	return bd["materias"]
+
+func obtener_materia(id_materia: int) -> Dictionary:
+	for mat in bd["materias"]:
+		if int(mat["id"]) == id_materia:
+			return mat
+	return {}
+
+## Módulos de una materia (en orden). Con id_materia = -1 regresa todos.
+func obtener_modulos_materia(id_materia: int) -> Array:
+	var lista: Array = []
+	for m in bd["modulos"]:
+		if id_materia < 0 or int(m.get("id_materia", 1)) == id_materia:
+			lista.append(m)
+	return lista
+
+func modulos_completados_materia(id_materia: int) -> int:
+	var total := 0
+	for m in obtener_modulos_materia(id_materia):
+		if m["estado"] == "completado":
+			total += 1
+	return total
+
+## Resumen de cada materia para el catálogo (paso 2 del CU-08):
+## nombre, módulos completados/total, porcentaje de avance y si está dominada.
+func obtener_catalogo_materias() -> Array:
+	var catalogo: Array = []
+	for mat in bd["materias"]:
+		var id_mat := int(mat["id"])
+		var mods := obtener_modulos_materia(id_mat)
+		var completados := modulos_completados_materia(id_mat)
+		var porcentaje := 0
+		if not mods.is_empty():
+			porcentaje = int(round(float(completados) / float(mods.size()) * 100.0))
+		var fila: Dictionary = mat.duplicate()
+		fila["modulos_totales"] = mods.size()
+		fila["modulos_completados"] = completados
+		fila["porcentaje"] = porcentaje
+		fila["sin_iniciar"] = completados == 0 and not _materia_tiene_intentos(id_mat)
+		fila["dominada"] = materia_dominada(id_mat)
+		fila["es_ultima"] = id_mat == int(bd.get("ultima_materia", 1))
+		catalogo.append(fila)
+	return catalogo
+
+func _materia_tiene_intentos(id_materia: int) -> bool:
+	for i in bd["intentos_modulo"]:
+		var m := obtener_modulo(int(i["id_modulo"]))
+		if not m.is_empty() and int(m.get("id_materia", 1)) == id_materia:
+			return true
+	return false
+
+## La materia visitada por última vez ("Continuar en…", flujo alternativo 2 del CU-08).
+func obtener_ultima_materia() -> Dictionary:
+	return obtener_materia(int(bd.get("ultima_materia", 1)))
+
+## Paso 4 del CU-08: el estudiante eligió una materia; se recuerda para la próxima vez.
+func seleccionar_materia(id_materia: int) -> void:
+	materia_seleccionada = id_materia
+	bd["ultima_materia"] = id_materia
+	guardar_bd()
+
+## El siguiente módulo jugable (desbloqueado) de una materia, para el menú.
+func siguiente_modulo_materia(id_materia: int) -> Dictionary:
+	for m in obtener_modulos_materia(id_materia):
+		if m["estado"] == "desbloqueado":
+			return m
+	return {}
+
+## Siguiente módulo de la misma materia (o {} si es el último).
+func siguiente_modulo_de(id_modulo: int) -> Dictionary:
+	var actual := obtener_modulo(id_modulo)
+	if actual.is_empty():
+		return {}
+	var mods := obtener_modulos_materia(int(actual.get("id_materia", 1)))
+	for k in mods.size():
+		if int(mods[k]["id"]) == id_modulo:
+			return mods[k + 1] if k + 1 < mods.size() else {}
+	return {}
 
 
 # =====================================================================
@@ -179,7 +326,10 @@ func obtener_intentos(id_modulo: int) -> Array:
 
 ## Registra un intento terminado. Regresa un Dictionary con todo lo que
 ## necesita la pantalla de resultados de los mockups.
-func registrar_intento(id_modulo: int, aciertos: int) -> Dictionary:
+##   puntos_reto  = puntos acumulados en el intento ya con los descuentos de pistas (CU-10);
+##                  -1 = calcularlos a partir de los aciertos (sin pistas).
+##   pistas       = número de pistas usadas en el intento (CU-10).
+func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pistas: int = 0) -> Dictionary:
 	var modulo := obtener_modulo(id_modulo)
 	if modulo.is_empty():
 		push_error("Módulo %d no existe" % id_modulo)
@@ -192,6 +342,8 @@ func registrar_intento(id_modulo: int, aciertos: int) -> Dictionary:
 	var porcentaje := int(round(float(aciertos) / float(total_preguntas) * 100.0))
 	var puntos_maximos := int(modulo["puntos_maximos"])
 	var puntos := int(round(float(aciertos) / float(total_preguntas) * puntos_maximos))
+	if puntos_reto >= 0:
+		puntos = mini(puntos_reto, puntos)        # CU-10: los puntos del intento reflejan los descuentos
 	var completado := porcentaje >= PORCENTAJE_MINIMO
 	var mejor_previo := int(modulo["mejor_puntaje"])          # -1 = sin intentos
 	var puntos_previos := int(modulo["puntos_obtenidos"])
@@ -206,27 +358,33 @@ func registrar_intento(id_modulo: int, aciertos: int) -> Dictionary:
 		"porcentaje": porcentaje,
 		"puntos": puntos,
 		"completado": completado,
+		"pistas": pistas,                 # CU-10: postcondición "el intento registra las pistas usadas"
 	})
 
 	# 2) Conservar el mejor puntaje ("Se conserva tu mejor puntaje")
 	var puntos_sumados := 0
 	if porcentaje > mejor_previo:
 		modulo["mejor_puntaje"] = porcentaje
-		if completado:
-			puntos_sumados = puntos - puntos_previos      # solo la mejora cuenta al total
-			modulo["puntos_obtenidos"] = puntos
-			bd["perfil_jugador"]["puntos_totales"] = obtener_puntos_totales() + puntos_sumados
+	if completado and puntos > puntos_previos:
+		puntos_sumados = puntos - puntos_previos      # solo la mejora cuenta al total
+		modulo["puntos_obtenidos"] = puntos
+		bd["perfil_jugador"]["puntos_totales"] = obtener_puntos_totales() + puntos_sumados
 
-	# 3) Marcar completado y desbloquear el siguiente de forma permanente
+	# 3) Marcar completado y desbloquear el siguiente DE LA MISMA MATERIA (regla del CU-08)
 	var siguiente_desbloqueado: Dictionary = {}
 	if completado:
 		modulo["estado"] = "completado"
-		var siguiente := obtener_modulo(id_modulo + 1)
+		var siguiente := siguiente_modulo_de(id_modulo)
 		if not siguiente.is_empty() and siguiente["estado"] == "bloqueado":
 			siguiente["estado"] = "desbloqueado"
 			siguiente_desbloqueado = siguiente
 
-	# 4) Insignias que se desbloquean con este intento (CU-05)
+	# 4) CU-11 paso 1: la práctica se desbloquea al completar todos los módulos de la materia
+	var id_materia := int(modulo.get("id_materia", 1))
+	var practica_desbloqueada := completado and siguiente_desbloqueado.is_empty() \
+		and practica_disponible(id_materia) and int(obtener_practica_estado(id_materia)["intentos"]) == 0
+
+	# 5) Insignias que se desbloquean con este intento (CU-05)
 	var insignias_nuevas := evaluar_insignias()
 	guardar_bd()
 
@@ -241,7 +399,129 @@ func registrar_intento(id_modulo: int, aciertos: int) -> Dictionary:
 		"puntos_totales": obtener_puntos_totales(),
 		"siguiente_desbloqueado": siguiente_desbloqueado,
 		"insignias_nuevas": insignias_nuevas,
+		"practica_desbloqueada": practica_desbloqueada,
 	}
+
+
+# =====================================================================
+#  CU-09: REPASAR MIS ERRORES
+# =====================================================================
+const REPASO_MAXIMO := 10            # máximo de preguntas por sesión de repaso (regla del CU-09)
+
+## Paso 6 (alt.) del CU-03: una pregunta respondida incorrectamente entra a la
+## lista de errores. Si ya estaba corregida en un repaso, vuelve a la lista.
+func registrar_error(id_reactivo: int) -> void:
+	var r := obtener_reactivo(id_reactivo)
+	if r.is_empty():
+		return
+	for e in bd["errores"]:
+		if int(e["id_reactivo"]) == id_reactivo:
+			e["corregida"] = false
+			e["fecha_fallo"] = Time.get_datetime_string_from_system()
+			guardar_bd()
+			return
+	bd["errores"].append({
+		"id_reactivo": id_reactivo,
+		"id_modulo": int(r["id_modulo"]),
+		"fecha_fallo": Time.get_datetime_string_from_system(),
+		"corregida": false,
+		"fecha_repaso": "",
+	})
+	guardar_bd()
+
+## Preguntas pendientes de repaso (falladas y aún no acertadas en repaso).
+## Con id_materia >= 0 solo las de esa materia.
+func obtener_errores_pendientes(id_materia: int = -1) -> Array:
+	var lista: Array = []
+	for e in bd["errores"]:
+		if e["corregida"]:
+			continue
+		var m := obtener_modulo(int(e["id_modulo"]))
+		if m.is_empty():
+			continue
+		if id_materia >= 0 and int(m.get("id_materia", 1)) != id_materia:
+			continue
+		lista.append(e)
+	return lista
+
+## Paso 2 del CU-09: errores agrupados por materia y módulo, con conteos.
+func obtener_resumen_errores() -> Array:
+	var resumen: Array = []
+	for mat in bd["materias"]:
+		var id_mat := int(mat["id"])
+		var pendientes := obtener_errores_pendientes(id_mat)
+		if pendientes.is_empty():
+			continue
+		var por_modulo: Dictionary = {}
+		for e in pendientes:
+			var id_mod := int(e["id_modulo"])
+			por_modulo[id_mod] = int(por_modulo.get(id_mod, 0)) + 1
+		var modulos_fila: Array = []
+		for id_mod in por_modulo.keys():
+			var m := obtener_modulo(int(id_mod))
+			modulos_fila.append({"id": int(id_mod), "nombre": m.get("nombre", ""), "errores": por_modulo[id_mod]})
+		resumen.append({
+			"id_materia": id_mat,
+			"materia": mat["nombre"],
+			"color": mat["color"],
+			"total": pendientes.size(),
+			"modulos": modulos_fila,
+		})
+	return resumen
+
+## Paso 6 del CU-09: resultado de una pregunta repasada.
+## Acierto → la pregunta se marca "corregida" y sale de la lista; fallo → permanece.
+## NO otorga puntos ni toca el mejor puntaje del módulo (regla del CU-09).
+func registrar_repaso(id_reactivo: int, acierto: bool) -> void:
+	for e in bd["errores"]:
+		if int(e["id_reactivo"]) == id_reactivo:
+			e["fecha_repaso"] = Time.get_datetime_string_from_system()
+			if acierto:
+				e["corregida"] = true
+			break
+	guardar_bd()
+
+## Paso 9 del CU-09: cierra la sesión de repaso (persistir + insignia si la lista quedó vacía).
+func terminar_repaso() -> Array:
+	var nuevas := evaluar_insignias()
+	guardar_bd()
+	return nuevas
+
+
+# =====================================================================
+#  CU-10: PEDIR UNA PISTA
+# =====================================================================
+## Costo de cada pista como fracción de los puntos de la pregunta (regla del CU-10).
+const COSTO_PISTAS := {"recordar": 0.25, "descartar": 0.50}
+
+func costo_pista(tipo: String) -> float:
+	return float(COSTO_PISTAS.get(tipo, 0.0))
+
+## Texto de la pista "Recordar el concepto": una frase del concepto asociado.
+## Regresa "" si el reactivo no tiene concepto (flujo alternativo 2 del CU-10).
+func texto_pista_concepto(id_reactivo: int) -> String:
+	var c := obtener_concepto(id_reactivo)
+	if c.is_empty():
+		return ""
+	var truco: String = str(c.get("truco", ""))
+	if truco != "":
+		return truco
+	var expl: String = str(c.get("explicacion", ""))
+	var punto := expl.find(". ")
+	return expl.substr(0, punto + 1) if punto > 0 else expl
+
+## Índice de una opción incorrecta que se puede descartar (-1 si no aplica:
+## pregunta de dos opciones, flujo alternativo 3 del CU-10).
+func opcion_a_descartar(id_reactivo: int) -> int:
+	var r := obtener_reactivo(id_reactivo)
+	if r.is_empty() or r["opciones"].size() <= 2:
+		return -1
+	var correcta := int(r["respuesta_correcta"])
+	var candidatas: Array = []
+	for i in r["opciones"].size():
+		if i != correcta:
+			candidatas.append(i)
+	return candidatas[randi() % candidatas.size()]
 
 
 # =====================================================================
@@ -261,6 +541,13 @@ func obtener_concepto(id_reactivo: int) -> Dictionary:
 		return {}
 	for c in bd["conceptos"]:
 		if c["id"] == r["id_concepto"]:
+			return c
+	return {}
+
+## Concepto por su id (CU-11: "Ver teoría" dentro de la práctica).
+func obtener_concepto_por_id(id_concepto: String) -> Dictionary:
+	for c in bd["conceptos"]:
+		if c["id"] == id_concepto:
 			return c
 	return {}
 
@@ -311,12 +598,25 @@ func evaluar_insignias() -> Array:
 		if int(m["mejor_puntaje"]) < 100:
 			todos_perfectos = false
 
-	var racha := 0      # módulos consecutivos completados desde el 1
-	for m in bd["modulos"]:
+	var racha := 0      # módulos consecutivos completados desde el 1 (materia 1)
+	for m in obtener_modulos_materia(1):
 		if m["estado"] == "completado":
 			racha += 1
 		else:
 			break
+
+	# Sprint 3 ---------------------------------------------------------
+	# CU-10: algún módulo completado sin usar pistas
+	var hay_sin_pistas := false
+	for i in intentos:
+		if bool(i["completado"]) and int(i.get("pistas", 0)) == 0:
+			hay_sin_pistas = true
+			break
+	# CU-09: hubo errores y la lista de pendientes quedó vacía
+	var errores: Array = bd.get("errores", [])
+	var lista_vaciada := not errores.is_empty() and obtener_errores_pendientes().is_empty()
+	# CU-11: al menos una materia dominada
+	var hay_dominada := materias_dominadas() >= 1
 
 	for ins in bd["insignias"]:
 		if ins["obtenida"]:
@@ -332,11 +632,114 @@ func evaluar_insignias() -> Array:
 			"analista":        cumple = hay_requerimientos
 			"ingeniero":       cumple = completados >= total_modulos
 			"perfeccionista":  cumple = todos_perfectos
+			"repasador":       cumple = lista_vaciada            # CU-09
+			"sin_pistas":      cumple = hay_sin_pistas           # CU-10
+			"dominio":         cumple = hay_dominada             # CU-11
 		if cumple:
 			ins["obtenida"] = true
 			ins["fecha_obtencion"] = Time.get_datetime_string_from_system()
 			nuevas.append(ins)
 	return nuevas
+
+
+# =====================================================================
+#  CU-11: RESOLVER PRÁCTICA DE INGENIERO
+# =====================================================================
+const PUNTOS_PRACTICA := 100
+
+## Definición (escenario + ejercicios) de la práctica de una materia; {} si no tiene.
+func obtener_practica(id_materia: int) -> Dictionary:
+	for p in bd["practicas"]:
+		if int(p["id_materia"]) == id_materia:
+			return p
+	return {}
+
+## Progreso guardado de la práctica: intentos, mejor porcentaje/puntos y si la materia está dominada.
+func obtener_practica_estado(id_materia: int) -> Dictionary:
+	var p := obtener_practica(id_materia)
+	if p.is_empty():
+		return {"intentos": 0, "mejor_porcentaje": -1, "mejor_puntos": 0, "dominada": false}
+	return {
+		"intentos": int(p.get("intentos", 0)),
+		"mejor_porcentaje": int(p.get("mejor_porcentaje", -1)),
+		"mejor_puntos": int(p.get("mejor_puntos", 0)),
+		"dominada": bool(p.get("dominada", false)),
+	}
+
+## Precondición del CU-11: todos los módulos de la materia completados (≥ 70 %).
+func practica_disponible(id_materia: int) -> bool:
+	var mods := obtener_modulos_materia(id_materia)
+	if mods.is_empty() or obtener_practica(id_materia).is_empty():
+		return false
+	return modulos_completados_materia(id_materia) >= mods.size()
+
+func materia_dominada(id_materia: int) -> bool:
+	return bool(obtener_practica_estado(id_materia)["dominada"])
+
+func materias_dominadas() -> int:
+	var n := 0
+	for p in bd["practicas"]:
+		if p.get("dominada", false):
+			n += 1
+	return n
+
+## Paso 9 del CU-11: guarda el intento de la práctica, actualiza la puntuación
+## total y, si el porcentaje es ≥ 70 %, marca la materia como "Dominada".
+## Al rejugar una práctica dominada, el intento solo se guarda si supera al mejor (alt. 4).
+func registrar_intento_practica(id_materia: int, piezas_correctas: int, piezas_totales: int) -> Dictionary:
+	var p := obtener_practica(id_materia)
+	if p.is_empty():
+		push_error("La materia %d no tiene práctica" % id_materia)
+		return {}
+	var porcentaje := int(round(float(piezas_correctas) / float(maxi(piezas_totales, 1)) * 100.0))
+	var puntos := int(round(float(piezas_correctas) / float(maxi(piezas_totales, 1)) * PUNTOS_PRACTICA))
+	var aprobada := porcentaje >= PORCENTAJE_MINIMO
+	var mejor_previo := int(p.get("mejor_porcentaje", -1))
+	var puntos_previos := int(p.get("mejor_puntos", 0))
+	var ya_dominada := bool(p.get("dominada", false))
+	var supera := porcentaje > mejor_previo
+
+	var guardado := not ya_dominada or supera
+	if guardado:
+		bd["intentos_practica"].append({
+			"id": bd["intentos_practica"].size() + 1,
+			"id_materia": id_materia,
+			"fecha": Time.get_datetime_string_from_system(),
+			"correctas": piezas_correctas,
+			"total": piezas_totales,
+			"porcentaje": porcentaje,
+			"puntos": puntos,
+			"aprobada": aprobada,
+		})
+		p["intentos"] = int(p.get("intentos", 0)) + 1
+
+	var puntos_sumados := 0
+	if supera:
+		p["mejor_porcentaje"] = porcentaje
+	if aprobada and puntos > puntos_previos:
+		puntos_sumados = puntos - puntos_previos
+		p["mejor_puntos"] = puntos
+		bd["perfil_jugador"]["puntos_totales"] = obtener_puntos_totales() + puntos_sumados
+	var recien_dominada := aprobada and not ya_dominada
+	if aprobada:
+		p["dominada"] = true
+
+	var insignias_nuevas := evaluar_insignias()
+	guardar_bd()
+	return {
+		"porcentaje": porcentaje,
+		"puntos": puntos,
+		"puntos_maximos": PUNTOS_PRACTICA,
+		"aprobada": aprobada,
+		"dominada": bool(p["dominada"]),
+		"recien_dominada": recien_dominada,
+		"mejor_previo": mejor_previo,
+		"guardado": guardado,
+		"intentos": int(p.get("intentos", 0)),
+		"puntos_sumados": puntos_sumados,
+		"puntos_totales": obtener_puntos_totales(),
+		"insignias_nuevas": insignias_nuevas,
+	}
 
 
 # =====================================================================
@@ -356,9 +759,11 @@ func obtener_progreso() -> Dictionary:
 		var mejor_puntos := 0              # puntos del mejor intento (aunque no haya completado)
 		for i in intentos_mod:
 			mejor_puntos = maxi(mejor_puntos, int(i["puntos"]))
+		var materia := obtener_materia(int(m.get("id_materia", 1)))
 		var fila := {
 			"id": int(m["id"]),
 			"nombre": m["nombre"],
+			"materia": materia.get("nombre", ""),
 			"mejor_porcentaje": mejor,
 			"mejor_puntos": mejor_puntos,
 			"intentos": intentos_mod.size(),
@@ -375,6 +780,9 @@ func obtener_progreso() -> Dictionary:
 		"tiene_intentos": not bd["intentos_modulo"].is_empty(),
 		"dominados": dominados,
 		"areas_mejora": mejora,
+		"errores_pendientes": obtener_errores_pendientes().size(),     # CU-09
+		"materias_dominadas": materias_dominadas(),                      # CU-11
+		"materias_totales": bd["materias"].size(),
 	}
 
 
@@ -390,7 +798,18 @@ func _bd_inicial() -> Dictionary:
 			"puntos_totales": 0,
 			"fecha_creacion": Time.get_datetime_string_from_system(),
 		},
+		# ---- CU-08: catálogo de materias del área de ingeniería de software ----
+		"materias": [
+			_materia(1, "Introducción a la Ingeniería de Software", "Intro. a Ing. de Software",
+				"Fundamentos, ciclo de vida, requerimientos, UML, diseño, pruebas, métricas y Scrum.", "libro", "#2F55E6"),
+			_materia(2, "Proceso de Software en Equipo", "Proceso en Equipo (TSP)",
+				"Roles, lanzamiento, planeación, estimación y seguimiento con valor ganado.", "grafica", "#178A4C"),
+			_materia(3, "Arquitectura y Diseño de Software", "Arquitectura y Diseño",
+				"Estilos arquitectónicos, patrones de diseño y principios SOLID.", "puzzle", "#7C3AED"),
+		],
+		"ultima_materia": 1,
 		"modulos": [
+			# Materia 1 · Introducción a la Ingeniería de Software (Sprint 1 y 2)
 			_modulo(1, "Fundamentos", "quiz", "5 preguntas sobre qué es la ingeniería de software.", "desbloqueado"),
 			_modulo(2, "Ciclo de vida", "quiz", "5 preguntas sobre modelos de ciclo de vida."),
 			_modulo(3, "Requerimientos de software", "quiz", "5 preguntas sobre requerimientos funcionales y no funcionales."),
@@ -399,6 +818,14 @@ func _bd_inicial() -> Dictionary:
 			_modulo(6, "Pruebas", "quiz", "5 preguntas sobre pruebas de software."),
 			_modulo(7, "Métricas", "puzzle", "Acertijos sobre métricas y estimación."),
 			_modulo(8, "Gestión ágil", "quiz", "5 preguntas sobre Scrum y metodologías ágiles."),
+			# Materia 2 · Proceso de Software en Equipo (Sprint 3, CU-08)
+			_modulo(9, "Roles y lanzamiento", "quiz", "5 preguntas sobre el TSP, sus roles y el lanzamiento del equipo.", "desbloqueado", 2),
+			_modulo(10, "Planeación y estimación", "quiz", "5 preguntas sobre horas de tarea, valor planeado y estimación.", "bloqueado", 2),
+			_modulo(11, "Valor ganado", "quiz", "5 preguntas sobre seguimiento del plan con EV, PV, SPI y CPI.", "bloqueado", 2),
+			# Materia 3 · Arquitectura y Diseño de Software (Sprint 3, CU-08)
+			_modulo(12, "Estilos arquitectónicos", "quiz", "5 preguntas sobre monolitos, cliente-servidor, capas y microservicios.", "desbloqueado", 3),
+			_modulo(13, "Patrones de diseño", "quiz", "5 preguntas sobre Observador, Estrategia, Fábrica y Adaptador.", "bloqueado", 3),
+			_modulo(14, "Principios SOLID", "quiz", "5 preguntas sobre los cinco principios SOLID.", "bloqueado", 3),
 		],
 		"reactivos": [
 			# ---- Módulo 1 · Fundamentos ----
@@ -529,6 +956,102 @@ func _bd_inicial() -> Dictionary:
 			_reactivo(40, 8, "¿Qué evento sirve para que el equipo mejore su forma de trabajar?",
 				["Sprint Retrospective", "Sprint Review", "Refinamiento", "Daily Scrum"], 0,
 				"En la retrospectiva el equipo reflexiona sobre su proceso y acuerda mejoras.", "retrospectiva"),
+			# ---- Módulo 9 · Roles y lanzamiento (TSP) ----
+			_reactivo(41, 9, "¿Qué es el TSP (Team Software Process)?",
+				["Un lenguaje de programación", "Un proceso para que equipos autodirigidos planeen, midan y mejoren su trabajo", "Una herramienta de control de versiones", "Un tipo de prueba de software"], 1,
+				"El TSP guía a equipos pequeños para planear, dar seguimiento y mejorar su proceso con datos.", "tsp"),
+			_reactivo(42, 9, "¿Qué rol del TSP coordina al equipo y da seguimiento al plan semana a semana?",
+				["Líder de equipo", "Gerente de desarrollo", "Gerente de calidad", "Gerente de soporte"], 0,
+				"El líder de equipo dirige las reuniones, motiva al equipo y vigila el avance del plan.", "roles_tsp"),
+			_reactivo(43, 9, "¿Qué rol vigila que se cumplan los estándares y que se hagan las inspecciones?",
+				["Gerente de planeación", "Gerente de calidad y proceso", "Gerente de desarrollo", "Líder de equipo"], 1,
+				"El gerente de calidad y proceso cuida que el equipo siga el proceso y registre los defectos.", "roles_tsp"),
+			_reactivo(44, 9, "El evento donde el equipo define metas, roles y plan al inicio del ciclo se llama:",
+				["Retrospectiva", "Postmortem", "Lanzamiento (launch)", "Daily Scrum"], 2,
+				"En el lanzamiento el equipo acuerda metas, asigna roles, estima y construye el plan del ciclo.", "lanzamiento"),
+			_reactivo(45, 9, "¿Qué documento firma el equipo para fijar sus reglas de trabajo y compromisos?",
+				["Manual de usuario", "Acuerdo de equipo", "Diagrama de Gantt", "Plan de pruebas"], 1,
+				"El acuerdo de equipo (team agreement) establece horarios, comunicación, roles y sanciones.", "acuerdo_equipo"),
+			# ---- Módulo 10 · Planeación y estimación ----
+			_reactivo(46, 10, "¿En qué unidad se estima el esfuerzo de cada tarea en el plan del TSP?",
+				["Horas de tarea", "Líneas de documentación", "Número de reuniones", "Puntos de historia"], 0,
+				"Cada tarea del plan se estima en horas de tarea; con ellas se construye el calendario.", "horas_tarea"),
+			_reactivo(47, 10, "¿Qué es el valor planeado (PV) de una tarea?",
+				["Las horas reales que tomó", "El porcentaje del esfuerzo total del plan que representa", "El dinero que cuesta", "Su fecha de entrega"], 1,
+				"PV = horas estimadas de la tarea / horas totales del plan × 100.", "valor_planeado"),
+			_reactivo(48, 10, "Un equipo de 3 personas dispone de 10 h por semana cada una. Si el plan son 90 h, ¿cuántas semanas dura?",
+				["1", "2", "3", "9"], 2,
+				"30 h disponibles por semana × 3 semanas = 90 h.", "horas_tarea"),
+			_reactivo(49, 10, "¿Qué método del PSP/TSP usa datos históricos para estimar tamaño y tiempo?",
+				["PROBE", "SCRUM", "UML", "KLOC"], 0,
+				"PROBE (PROxy Based Estimating) estima a partir de datos de proyectos anteriores.", "probe"),
+			_reactivo(50, 10, "El diagrama de Gantt y el tablero de tareas sirven para:",
+				["Compilar el código", "Visualizar el calendario y el avance de las tareas", "Medir la complejidad", "Probar la interfaz"], 1,
+				"Gantt muestra tareas contra tiempo; el tablero muestra qué está por hacer, en curso y hecho.", "gantt"),
+			# ---- Módulo 11 · Valor ganado ----
+			_reactivo(51, 11, "¿Qué es el valor ganado (EV)?",
+				["La suma del valor planeado de las tareas terminadas", "Las horas trabajadas", "El dinero recibido", "El número de tareas pendientes"], 0,
+				"EV acumula el PV de cada tarea cuando ésta se termina al 100 %.", "valor_ganado_tsp"),
+			_reactivo(52, 11, "Si al final de la semana PV = 60 % y EV = 45 %, el proyecto va:",
+				["Adelantado", "Retrasado", "En tiempo", "Terminado"], 1,
+				"EV < PV significa que se ha ganado menos valor del planeado: hay retraso.", "valor_ganado_tsp"),
+			_reactivo(53, 11, "SPI = EV / PV. Un SPI de 1.2 significa que el equipo:",
+				["Avanza más rápido de lo planeado", "Va retrasado", "Gasta de más", "Terminó el proyecto"], 0,
+				"SPI > 1 indica más valor ganado que planeado: el equipo va adelantado.", "spi_cpi"),
+			_reactivo(54, 11, "CPI = EV / AC. Un CPI menor que 1 significa que:",
+				["Sobran horas", "Se gasta más esfuerzo del planeado por cada unidad de valor", "El plan es perfecto", "No hay defectos"], 1,
+				"CPI < 1: el costo real (horas) supera lo planeado para el valor obtenido.", "spi_cpi"),
+			_reactivo(55, 11, "¿Cuándo se registra el valor ganado de una tarea en el TSP?",
+				["Al empezarla", "Cuando lleva 50 %", "Solo cuando está 100 % terminada", "Al final del proyecto"], 2,
+				"En TSP una tarea aporta su valor solo al terminarse por completo; no hay crédito parcial.", "valor_ganado_tsp"),
+			# ---- Módulo 12 · Estilos arquitectónicos ----
+			_reactivo(56, 12, "¿Qué es la arquitectura de software?",
+				["El código de la interfaz", "La estructura de alto nivel: componentes y sus relaciones", "La lista de requerimientos", "El manual de instalación"], 1,
+				"La arquitectura define los componentes principales del sistema y cómo se comunican.", "arquitectura"),
+			_reactivo(57, 12, "¿Qué estilo divide el sistema en un cliente que pide servicios y un servidor que responde?",
+				["Cliente-servidor", "Monolito", "Tubería y filtros", "Pizarra"], 0,
+				"En cliente-servidor los clientes hacen peticiones y el servidor centraliza datos y lógica.", "cliente_servidor"),
+			_reactivo(58, 12, "¿Qué estilo divide la aplicación en servicios pequeños, independientes y desplegables por separado?",
+				["Capas", "Monolito", "Microservicios", "Cliente-servidor"], 2,
+				"Los microservicios son servicios pequeños con su propia base de datos y despliegue.", "microservicios"),
+			_reactivo(59, 12, "Un monolito es:",
+				["Una aplicación que se despliega como una sola unidad", "Un conjunto de servicios", "Una base de datos", "Un patrón de diseño"], 0,
+				"En un monolito toda la funcionalidad vive en un solo ejecutable; es simple pero difícil de escalar.", "monolito"),
+			_reactivo(60, 12, "¿Qué atributo de calidad mide qué tan fácil es modificar el sistema?",
+				["Rendimiento", "Mantenibilidad", "Disponibilidad", "Seguridad"], 1,
+				"La mantenibilidad es la facilidad para corregir, adaptar y mejorar el software.", "atributos_calidad"),
+			# ---- Módulo 13 · Patrones de diseño ----
+			_reactivo(61, 13, "Los patrones de diseño son:",
+				["Soluciones probadas a problemas recurrentes de diseño", "Plantillas de interfaz", "Lenguajes de programación", "Pruebas automatizadas"], 0,
+				"Un patrón describe una solución reutilizable a un problema de diseño que aparece una y otra vez.", "patrones"),
+			_reactivo(62, 13, "¿Qué patrón notifica a varios objetos cuando otro cambia de estado?",
+				["Singleton", "Observador", "Fábrica", "Adaptador"], 1,
+				"El Observador mantiene una lista de suscriptores y les avisa de cada cambio.", "observador"),
+			_reactivo(63, 13, "¿Qué patrón permite intercambiar algoritmos en tiempo de ejecución?",
+				["Estrategia", "Decorador", "Singleton", "Compuesto"], 0,
+				"Estrategia encapsula cada algoritmo en una clase intercambiable con la misma interfaz.", "estrategia"),
+			_reactivo(64, 13, "¿Qué patrón crea objetos sin exponer al cliente la lógica de creación?",
+				["Observador", "Adaptador", "Fábrica", "Estrategia"], 2,
+				"La Fábrica centraliza la creación de objetos y devuelve la clase concreta adecuada.", "fabrica"),
+			_reactivo(65, 13, "¿Qué patrón convierte la interfaz de una clase en otra que el cliente espera?",
+				["Adaptador", "Singleton", "Observador", "Fachada"], 0,
+				"El Adaptador envuelve una clase incompatible para que funcione con la interfaz esperada.", "adaptador"),
+			# ---- Módulo 14 · Principios SOLID ----
+			_reactivo(66, 14, "El principio abierto/cerrado (O de SOLID) dice que una clase debe estar:",
+				["Abierta a la modificación y cerrada a la extensión", "Abierta a la extensión y cerrada a la modificación", "Siempre abierta", "Siempre cerrada"], 1,
+				"Se agrega comportamiento extendiendo (herencia, interfaces), no modificando el código existente.", "ocp"),
+			_reactivo(67, 14, "El principio de sustitución de Liskov (L) dice que:",
+				["Una subclase debe poder usarse en lugar de su clase base sin romper el programa", "Toda clase debe tener un constructor", "Las clases no deben heredar", "Los métodos deben ser estáticos"], 0,
+				"Si una subclase cambia el comportamiento esperado de la base, viola Liskov.", "lsp"),
+			_reactivo(68, 14, "La segregación de interfaces (I) recomienda:",
+				["Una sola interfaz gigante", "Interfaces pequeñas y específicas para cada cliente", "No usar interfaces", "Interfaces solo en la vista"], 1,
+				"Ningún cliente debe depender de métodos que no usa.", "isp"),
+			_reactivo(69, 14, "La inversión de dependencias (D) dice que los módulos de alto nivel deben depender de:",
+				["Clases concretas", "La base de datos", "Abstracciones (interfaces)", "El sistema operativo"], 2,
+				"Alto y bajo nivel dependen de abstracciones; así se puede cambiar la implementación sin tocar la lógica.", "dip"),
+			_reactivo(70, 14, "¿Qué 'code smell' indica que una clase hace demasiadas cosas (viola la S de SOLID)?",
+				["Método corto", "Clase Dios (God class)", "Nombre descriptivo", "Prueba unitaria"], 1,
+				"Una clase Dios concentra demasiadas responsabilidades y es difícil de mantener y probar.", "srp"),
 		],
 		"intentos_modulo": [],
 		"teoria_consultas": 0,
@@ -694,6 +1217,104 @@ func _bd_inicial() -> Dictionary:
 				"Al final de cada sprint el equipo reflexiona: qué salió bien, qué salió mal y qué va a mejorar. Es el evento de mejora continua de Scrum.",
 				["Qué salió bien", "Qué mejorar", "Mejora continua"],
 				"Review = mejorar el producto; Retrospective = mejorar al equipo."),
+			# ---- Materia 2 · Proceso de Software en Equipo ----
+			_concepto("tsp", 9, "Team Software Process (TSP)",
+				"El TSP es un proceso para equipos pequeños y autodirigidos: el equipo planea su trabajo, mide su avance con datos (horas, tamaño, defectos) y mejora su proceso en cada ciclo. Se apoya en el PSP, la disciplina personal de cada integrante.",
+				["Equipo autodirigido", "Datos", "Ciclos", "PSP"],
+				"TSP = el equipo decide, mide y mejora; nadie lo hace por él."),
+			_concepto("roles_tsp", 9, "Roles del TSP",
+				"Cada integrante asume un rol además de desarrollar: líder de equipo (coordina y da seguimiento), gerente de desarrollo (diseño y producto), gerente de planeación (plan y valor ganado), gerente de calidad y proceso (estándares, inspecciones, defectos) y gerente de soporte (herramientas y configuración).",
+				["Líder", "Desarrollo", "Planeación", "Calidad", "Soporte"],
+				"Pregunta '¿quién cuida el plan?' → planeación; '¿quién cuida el proceso?' → calidad; '¿quién coordina?' → líder."),
+			_concepto("lanzamiento", 9, "El lanzamiento (launch)",
+				"Al inicio de cada ciclo el equipo se reúne para fijar metas, asignar roles, estimar las tareas, construir el calendario, evaluar riesgos y presentar el plan. Sin lanzamiento no hay plan compartido.",
+				["Metas", "Roles", "Estimación", "Calendario", "Riesgos"],
+				"Lanzamiento = planear juntos antes de empezar."),
+			_concepto("acuerdo_equipo", 9, "Acuerdo de equipo",
+				"El acuerdo de equipo (team agreement) es el documento firmado por todos con las reglas de trabajo: horarios, canales de comunicación, cómo se toman decisiones, responsabilidades de cada rol y qué pasa si alguien incumple.",
+				["Reglas", "Comunicación", "Decisiones", "Sanciones"],
+				"Es el 'contrato' interno del equipo."),
+			_concepto("horas_tarea", 10, "Horas de tarea y disponibilidad",
+				"Cada tarea del plan se estima en horas de tarea. La duración del proyecto resulta de dividir las horas totales entre las horas disponibles por semana del equipo (no todas las horas de la semana son horas de tarea).",
+				["Horas de tarea", "Disponibilidad semanal", "Calendario"],
+				"Semanas = horas del plan ÷ horas disponibles por semana."),
+			_concepto("valor_planeado", 10, "Valor planeado (PV)",
+				"El valor planeado de una tarea es el porcentaje del esfuerzo total del plan que representa: sus horas estimadas entre las horas totales por cien. Sumando el PV de las tareas de cada semana se obtiene el PV acumulado esperado.",
+				["Porcentaje del plan", "Horas estimadas", "Acumulado por semana"],
+				"PV responde: ¿qué tanto del proyecto debería estar hecho para esta fecha?"),
+			_concepto("probe", 10, "Estimación PROBE",
+				"PROBE (PROxy Based Estimating) estima el tamaño y el tiempo de una tarea nueva a partir de datos históricos de tareas parecidas. Mientras más datos propios tenga el equipo, mejores serán sus estimaciones.",
+				["Datos históricos", "Tareas similares", "Mejora con el tiempo"],
+				"Estimar sin datos es adivinar; PROBE usa lo que ya mediste."),
+			_concepto("gantt", 10, "Gantt y tablero de tareas",
+				"El diagrama de Gantt muestra las tareas contra el tiempo (cuándo empieza y termina cada una). El tablero de tareas muestra el estado actual: por hacer, en curso y hecho. Juntos permiten ver el calendario y el avance.",
+				["Tareas vs tiempo", "Estado actual", "Avance"],
+				"Gantt = cuándo; tablero = cómo va."),
+			_concepto("valor_ganado_tsp", 11, "Valor ganado (EV)",
+				"El valor ganado acumula el valor planeado de las tareas que ya están terminadas al 100 %. No hay crédito parcial: una tarea a medias no suma nada. Comparar EV con PV dice si el proyecto va en tiempo.",
+				["Tareas terminadas", "Sin crédito parcial", "EV vs PV"],
+				"EV < PV = retraso; EV = PV = en tiempo; EV > PV = adelantado."),
+			_concepto("spi_cpi", 11, "Índices SPI y CPI",
+				"SPI = EV / PV mide el desempeño en calendario (mayor que 1 es adelantado). CPI = EV / AC mide el desempeño en costo, usando las horas reales (AC): menor que 1 significa que cuesta más esfuerzo del planeado obtener el valor.",
+				["SPI calendario", "CPI costo", "1 es el punto de equilibrio"],
+				"S de schedule (tiempo), C de cost (horas reales)."),
+			# ---- Materia 3 · Arquitectura y Diseño de Software ----
+			_concepto("arquitectura", 12, "Arquitectura de software",
+				"La arquitectura es la estructura de alto nivel del sistema: sus componentes principales, cómo se relacionan y las decisiones difíciles de cambiar después. Se elige según los atributos de calidad que importan.",
+				["Componentes", "Relaciones", "Decisiones difíciles de cambiar"],
+				"Si cambiarlo después duele mucho, es arquitectura."),
+			_concepto("cliente_servidor", 12, "Cliente-servidor",
+				"Los clientes (apps, navegadores) hacen peticiones y un servidor centraliza los datos y la lógica para responderlas. Es el estilo de casi todas las aplicaciones web y móviles con backend.",
+				["Petición", "Respuesta", "Servidor central"],
+				"El cliente pregunta, el servidor contesta."),
+			_concepto("microservicios", 12, "Microservicios",
+				"La aplicación se divide en servicios pequeños e independientes, cada uno con su propia responsabilidad, base de datos y despliegue. Escalan por separado pero aumentan la complejidad de operación.",
+				["Servicios pequeños", "Independientes", "Despliegue separado"],
+				"Muchos servicios chicos en vez de uno grande."),
+			_concepto("monolito", 12, "Monolito",
+				"Toda la funcionalidad vive en una sola unidad que se construye y despliega junta. Es simple de empezar y probar, pero cuesta escalar partes por separado y un error puede tirar todo el sistema.",
+				["Una sola unidad", "Simple al inicio", "Difícil de escalar"],
+				"Monolito = una sola pieza."),
+			_concepto("atributos_calidad", 12, "Atributos de calidad",
+				"Los atributos de calidad (mantenibilidad, rendimiento, disponibilidad, seguridad, escalabilidad, usabilidad) son las cualidades que la arquitectura debe garantizar. Elegir una arquitectura es priorizar unos atributos sobre otros.",
+				["Mantenibilidad", "Rendimiento", "Disponibilidad", "Seguridad"],
+				"Mantenibilidad = qué tan fácil es cambiarlo."),
+			_concepto("patrones", 13, "Patrones de diseño",
+				"Un patrón de diseño es una solución probada y reutilizable a un problema de diseño que aparece una y otra vez. Tiene nombre, problema, solución y consecuencias; los popularizó el libro de la 'Banda de los Cuatro' (GoF).",
+				["Problema recurrente", "Solución probada", "Nombre común"],
+				"Un patrón es una receta con nombre; no es código que se copia."),
+			_concepto("observador", 13, "Patrón Observador",
+				"Un objeto (sujeto) mantiene una lista de observadores y les notifica automáticamente cuando cambia su estado. Desacopla a quien produce el cambio de quienes reaccionan a él. Las señales de Godot son un ejemplo.",
+				["Sujeto", "Observadores", "Notificación"],
+				"Si un cambio debe avisar a varios, usa Observador."),
+			_concepto("estrategia", 13, "Patrón Estrategia",
+				"Define una familia de algoritmos, encapsula cada uno en una clase con la misma interfaz y permite intercambiarlos en tiempo de ejecución sin cambiar al cliente que los usa.",
+				["Familia de algoritmos", "Misma interfaz", "Intercambiables"],
+				"Si tienes un 'switch' para elegir cómo calcular algo, probablemente quieres Estrategia."),
+			_concepto("fabrica", 13, "Patrón Fábrica",
+				"Centraliza la creación de objetos: el cliente pide un objeto a la fábrica y ésta decide qué clase concreta construir. Así el cliente no depende de las clases concretas.",
+				["Creación centralizada", "Clase concreta oculta", "Menos acoplamiento"],
+				"El cliente pide, la fábrica construye."),
+			_concepto("adaptador", 13, "Patrón Adaptador",
+				"Envuelve una clase con una interfaz incompatible para que funcione con la interfaz que el cliente espera, sin modificar ninguna de las dos. Es el 'convertidor de enchufe' del software.",
+				["Interfaz incompatible", "Envoltura", "Sin modificar"],
+				"Adaptador = convertidor de enchufe."),
+			_concepto("ocp", 14, "Principio abierto/cerrado",
+				"Las clases deben estar abiertas a la extensión y cerradas a la modificación: para agregar comportamiento se añade código nuevo (herencia, interfaces, composición) en lugar de modificar el que ya funciona y está probado.",
+				["Abierto a extensión", "Cerrado a modificación", "Agregar, no cambiar"],
+				"Si cada función nueva te obliga a editar un 'switch' viejo, violas OCP."),
+			_concepto("lsp", 14, "Sustitución de Liskov",
+				"Una subclase debe poder usarse donde se espera la clase base sin que el programa se rompa ni cambie su comportamiento esperado. Si al sustituir hay sorpresas, la herencia está mal planteada.",
+				["Sustituible", "Sin sorpresas", "Herencia correcta"],
+				"Si 'es un' pero no se comporta como tal, no debería heredar."),
+			_concepto("isp", 14, "Segregación de interfaces",
+				"Es mejor tener varias interfaces pequeñas y específicas que una gigante: ningún cliente debe verse obligado a implementar o depender de métodos que no usa.",
+				["Interfaces pequeñas", "Específicas", "Nada que no se use"],
+				"Si implementas métodos vacíos solo para cumplir la interfaz, violas ISP."),
+			_concepto("dip", 14, "Inversión de dependencias",
+				"Los módulos de alto nivel (lógica de negocio) no deben depender de los de bajo nivel (base de datos, red): ambos deben depender de abstracciones. Así se puede cambiar la implementación sin tocar la lógica.",
+				["Abstracciones", "Alto nivel", "Bajo nivel"],
+				"La lógica habla con una interfaz, nunca con MySQL directamente."),
 		],
 		# ---- CU-05: catálogo de insignias (la condición se evalúa en evaluar_insignias) ----
 		"insignias": [
@@ -704,10 +1325,157 @@ func _bd_inicial() -> Dictionary:
 			_insignia("racha", "Racha", "Tres módulos seguidos completados sin dejar huecos en el mapa.", "Completa los módulos 1, 2 y 3 de forma consecutiva.", "play", "#C2410C"),
 			_insignia("constante", "Constante", "La práctica hace al ingeniero: acumulaste diez intentos.", "Termina 10 retos (cuentan todos los intentos).", "reiniciar", "#D97706"),
 			_insignia("analista", "Analista", "Dominas los requerimientos funcionales y no funcionales.", "Completa el módulo 3 · Requerimientos de software.", "quiz", "#2F55E6"),
-			_insignia("ingeniero", "Ingeniero", "Recorriste todo el mapa: completaste los ocho módulos.", "Completa los 8 módulos con al menos 70 %.", "mapa", "#B45309"),
-			_insignia("perfeccionista", "Perfeccionista", "Nada se te escapó: 100 % en todos los módulos.", "Alcanza 100 % como mejor puntaje en los 8 módulos.", "estrella", "#14633A"),
+			_insignia("ingeniero", "Ingeniero", "Recorriste todos los mapas: completaste los módulos de todas las materias.", "Completa todos los módulos de todas las materias con al menos 70 %.", "mapa", "#B45309"),
+			_insignia("perfeccionista", "Perfeccionista", "Nada se te escapó: 100 % en todos los módulos.", "Alcanza 100 % como mejor puntaje en todos los módulos.", "estrella", "#14633A"),
+			# Sprint 3
+			_insignia("repasador", "Repasador", "Corregiste todos tus errores: la lista de repaso quedó vacía.", "Deja en cero la lista de Repasar mis errores.", "reiniciar", "#0E7490"),
+			_insignia("sin_pistas", "Sin ayuda", "Completaste un módulo sin pedir ninguna pista.", "Completa un módulo (≥ 70 %) sin usar pistas.", "ojo", "#7C3AED"),
+			_insignia("dominio", "Dominio", "Resolviste la práctica de ingeniero y dominaste una materia.", "Aprueba (≥ 70 %) la práctica de ingeniero de una materia.", "puzzle", "#C2410C"),
 		],
+		# ---- CU-09: preguntas falladas pendientes de repaso ----
+		"errores": [],
+		# ---- CU-11: una práctica de ingeniero por materia (escenario + ejercicios de manipulación) ----
+		"practicas": [
+			_practica(1, "Biblioteca escolar",
+				"El cliente, la biblioteca de una preparatoria, pide una app para registrar préstamos de libros. Vas a aplicar lo aprendido en la materia para analizar y planear el proyecto.",
+				[
+					_ej_clasificar("Clasifica cada requerimiento del cliente.", ["Funcional", "No funcional"], [
+						["Registrar el préstamo de un libro", "Funcional"],
+						["Responder en menos de 2 segundos", "No funcional"],
+						["Enviar recordatorio de devolución", "Funcional"],
+						["Funcionar sin conexión a internet", "No funcional"],
+						["Cifrar las contraseñas de los usuarios", "No funcional"],
+						["Generar el reporte mensual de préstamos", "Funcional"],
+					], "Funcional = una acción que el sistema hace; no funcional = una cualidad o límite (tiempo, seguridad, disponibilidad).", "req_no_funcional"),
+					_ej_construir("Arma el diagrama de casos de uso: coloca cada elemento donde va.", ["Actor", "Caso de uso"], [
+						["Bibliotecario", "Actor"],
+						["Prestar libro", "Caso de uso"],
+						["Alumno", "Actor"],
+						["Devolver libro", "Caso de uso"],
+						["Consultar catálogo", "Caso de uso"],
+						["Sistema de correo", "Actor"],
+					], "Los actores son personas o sistemas externos; los casos de uso son las funciones que el sistema les ofrece.", "casos_uso"),
+					_ej_ordenar("Ordena las fases del modelo en cascada, de la primera a la última.", [
+						"Análisis de requerimientos", "Diseño", "Implementación", "Pruebas", "Mantenimiento",
+					], "No puedes probar lo que no has programado ni programar lo que no has diseñado.", "cascada"),
+					_ej_seleccionar("El primer sprint tiene 20 h disponibles. Elige las tareas que caben sin exceder las horas, priorizando primero las de prioridad alta y luego las de media.", 20, [
+						["Registrar préstamo · prioridad alta", 8, true],
+						["Buscar libro por título · prioridad alta", 6, true],
+						["Recordatorio por correo · prioridad media", 5, true],
+						["Modo oscuro · prioridad baja", 6, false],
+						["Estadísticas con gráficas · prioridad baja", 10, false],
+					], "Alta + alta + media = 19 h; cualquier tarea de prioridad baja ya no cabe en las 20 h.", "sprint"),
+				]),
+			_practica(2, "Lanzamiento del Sprint 3",
+				"Tu equipo de tres personas inicia el Sprint 3 de su proyecto escolar. Vas a aplicar el TSP: repartir roles, planear el ciclo, elegir tareas y leer el valor ganado.",
+				[
+					_ej_clasificar("¿A qué rol del TSP le corresponde cada tarea?", ["Líder de equipo", "Gerente de calidad", "Gerente de planeación"], [
+						["Dirigir la reunión semanal", "Líder de equipo"],
+						["Revisar que las inspecciones se hagan", "Gerente de calidad"],
+						["Armar el Gantt del sprint", "Gerente de planeación"],
+						["Registrar los defectos encontrados", "Gerente de calidad"],
+						["Calcular el valor ganado semanal", "Gerente de planeación"],
+						["Resolver conflictos entre integrantes", "Líder de equipo"],
+					], "Líder = coordina; calidad = proceso y defectos; planeación = plan y valor ganado.", "roles_tsp"),
+					_ej_ordenar("Ordena los pasos del lanzamiento (launch) del TSP.", [
+						"Definir las metas del equipo", "Asignar los roles", "Estimar tamaño y horas de las tareas",
+						"Construir el calendario", "Evaluar los riesgos", "Presentar el plan al profesor",
+					], "Primero el qué (metas) y el quién (roles); luego el cuánto (estimar), el cuándo (calendario) y los riesgos; al final se presenta.", "lanzamiento"),
+					_ej_seleccionar("Esta semana el equipo tiene 24 h disponibles. Elige las tareas del plan que caben, priorizando alta y luego media.", 24, [
+						["Codificar CU-08 · prioridad alta", 10, true],
+						["Pruebas de CU-08 · prioridad alta", 6, true],
+						["Actualizar el SRS · prioridad media", 4, true],
+						["Manual de usuario · prioridad media", 8, false],
+						["Rediseñar el logo · prioridad baja", 6, false],
+					], "10 + 6 + 4 = 20 h; el manual (8 h) ya no cabe y el logo es prioridad baja.", "horas_tarea"),
+					_ej_clasificar("Al cierre de la semana: PV = 50 %, EV = 40 % y AC = 55 h de 50 h planeadas. Clasifica cada afirmación.", ["Verdadero", "Falso"], [
+						["El proyecto va retrasado", "Verdadero"],
+						["SPI = 0.8", "Verdadero"],
+						["Se ha gastado menos esfuerzo del planeado", "Falso"],
+						["CPI es menor que 1", "Verdadero"],
+						["El equipo va adelantado", "Falso"],
+					], "EV < PV → retraso; SPI = 40/50 = 0.8; AC (55 h) > planeado (50 h) → CPI < 1.", "spi_cpi"),
+				]),
+			_practica(3, "App de pedidos en línea",
+				"Una fonda quiere una app para recibir pedidos y pagos. Vas a decidir su arquitectura, elegir patrones de diseño y detectar violaciones a SOLID.",
+				[
+					_ej_ordenar("Ordena las capas de la arquitectura, de la más cercana al usuario a la más lejana.", [
+						"Interfaz de usuario", "Lógica de negocio", "Acceso a datos", "Base de datos",
+					], "Presentación arriba, datos abajo; cada capa solo habla con la adyacente.", "capas"),
+					_ej_clasificar("Elige el patrón de diseño adecuado para cada necesidad.", ["Observador", "Singleton", "Estrategia", "Adaptador"], [
+						["Una sola conexión a la base de datos", "Singleton"],
+						["Avisar a la pantalla cuando cambie el carrito", "Observador"],
+						["Cambiar el cálculo de envío según el país", "Estrategia"],
+						["Usar una librería de pagos con otra interfaz", "Adaptador"],
+						["Elegir entre varios algoritmos de descuento", "Estrategia"],
+						["Un único registro de configuración global", "Singleton"],
+					], "Uno solo → Singleton; avisar cambios → Observador; algoritmos intercambiables → Estrategia; interfaz incompatible → Adaptador.", "patrones"),
+					_ej_clasificar("¿Qué principio SOLID se viola en cada caso?", ["SRP", "OCP", "DIP"], [
+						["Una clase calcula el total, imprime el ticket y envía el correo", "SRP"],
+						["Para agregar un método de pago hay que modificar un switch gigante", "OCP"],
+						["La lógica de negocio crea directamente una conexión MySQL", "DIP"],
+						["La clase Pedido también guarda archivos en disco", "SRP"],
+						["El módulo de reportes depende de una clase concreta de Excel", "DIP"],
+					], "Muchas responsabilidades → SRP; modificar para extender → OCP; depender de clases concretas → DIP.", "srp"),
+					_ej_seleccionar("Tienes 12 h para refactorizar antes de la entrega. Elige las mejoras que caben, priorizando las de prioridad alta y luego media.", 12, [
+						["Extraer la lógica de pago a su propia clase · prioridad alta", 5, true],
+						["Agregar una interfaz para el acceso a datos · prioridad alta", 4, true],
+						["Renombrar variables confusas · prioridad media", 2, true],
+						["Cambiar los colores de la app · prioridad baja", 3, false],
+						["Reescribir todo en otro lenguaje · prioridad baja", 40, false],
+					], "5 + 4 + 2 = 11 h; lo demás es prioridad baja o no cabe.", "ocp"),
+				]),
+		],
+		"intentos_practica": [],
 	}
+
+func _materia(id: int, nombre: String, corto: String, descripcion: String, icono: String, color: String) -> Dictionary:
+	return {
+		"id": id,
+		"nombre": nombre,
+		"corto": corto,            # nombre corto para chips y etiquetas
+		"descripcion": descripcion,
+		"icono": icono,            # tipo de Icono.gd
+		"color": color,
+	}
+
+func _practica(id_materia: int, titulo: String, escenario: String, ejercicios: Array) -> Dictionary:
+	return {
+		"id_materia": id_materia,
+		"titulo": titulo,
+		"escenario": escenario,
+		"ejercicios": ejercicios,
+		"intentos": 0,
+		"mejor_porcentaje": -1,
+		"mejor_puntos": 0,
+		"dominada": false,
+	}
+
+## Ejercicio "clasificar": arrastrar (tocar) tarjetas a categorías.
+func _ej_clasificar(instruccion: String, categorias: Array, piezas: Array, justificacion: String, concepto: String = "") -> Dictionary:
+	var lista: Array = []
+	for p in piezas:
+		lista.append({"texto": p[0], "categoria": p[1]})
+	return {"tipo": "clasificar", "instruccion": instruccion, "categorias": categorias, "piezas": lista,
+		"justificacion": justificacion, "concepto": concepto}
+
+## Ejercicio "construir": colocar actores y casos de uso en el diagrama (misma mecánica que clasificar).
+func _ej_construir(instruccion: String, zonas: Array, piezas: Array, justificacion: String, concepto: String = "") -> Dictionary:
+	var ej := _ej_clasificar(instruccion, zonas, piezas, justificacion, concepto)
+	ej["tipo"] = "construir"
+	return ej
+
+## Ejercicio "ordenar": construir una secuencia tocando las piezas en orden.
+func _ej_ordenar(instruccion: String, piezas_en_orden: Array, justificacion: String, concepto: String = "") -> Dictionary:
+	return {"tipo": "ordenar", "instruccion": instruccion, "piezas": piezas_en_orden, "justificacion": justificacion, "concepto": concepto}
+
+## Ejercicio "seleccionar": elegir qué tareas caben sin exceder el límite de horas.
+func _ej_seleccionar(instruccion: String, limite: int, piezas: Array, justificacion: String, concepto: String = "") -> Dictionary:
+	var lista: Array = []
+	for p in piezas:
+		lista.append({"texto": p[0], "horas": p[1], "correcta": p[2]})
+	return {"tipo": "seleccionar", "instruccion": instruccion, "limite": limite, "piezas": lista,
+		"justificacion": justificacion, "concepto": concepto}
 
 func _concepto(id: String, id_modulo: int, titulo: String, explicacion: String, claves: Array, truco: String) -> Dictionary:
 	return {
@@ -731,9 +1499,10 @@ func _insignia(id: String, titulo: String, descripcion: String, condicion: Strin
 		"fecha_obtencion": "",
 	}
 
-func _modulo(id: int, nombre: String, tipo: String, descripcion: String, estado: String = "bloqueado") -> Dictionary:
+func _modulo(id: int, nombre: String, tipo: String, descripcion: String, estado: String = "bloqueado", id_materia: int = 1) -> Dictionary:
 	return {
 		"id": id,
+		"id_materia": id_materia,     # CU-08: materia a la que pertenece el módulo
 		"nombre": nombre,
 		"tipo": tipo,                 # "quiz" o "puzzle"
 		"descripcion": descripcion,

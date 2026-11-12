@@ -19,6 +19,8 @@ const RUTA_MAPA      := "res://scenes/cu02_mapa/Mapa.tscn"
 func _ready() -> void:
 	%BtnVolver.pressed.connect(_volver_al_reto)
 	%BtnVolverReto.pressed.connect(_volver_al_reto)
+	if JuegoRepository.teoria_regreso != "":
+		%BtnVolverReto.text = "Volver al repaso"       # CU-09: se abrió desde Repasar mis errores
 
 	var id_reactivo: int = JuegoRepository.reactivo_teoria
 	var concepto := JuegoRepository.obtener_concepto(id_reactivo)
@@ -63,7 +65,12 @@ func _mostrar_no_disponible() -> void:
 # ===================== PASOS 4-5: VOLVER A CU-03 =====================
 func _volver_al_reto() -> void:
 	JuegoRepository.reactivo_teoria = -1
-	if not JuegoRepository.reto_en_pausa.is_empty() and ResourceLoader.exists(RUTA_ACTIVIDAD):
+	# CU-09: si la teoría se abrió desde el repaso de errores, se regresa ahí
+	var regreso: String = JuegoRepository.teoria_regreso
+	JuegoRepository.teoria_regreso = ""
+	if regreso != "" and ResourceLoader.exists(regreso):
+		get_tree().change_scene_to_file(regreso)
+	elif not JuegoRepository.reto_en_pausa.is_empty() and ResourceLoader.exists(RUTA_ACTIVIDAD):
 		get_tree().change_scene_to_file(RUTA_ACTIVIDAD)   # CU-03 continúa en el paso 4
 	else:
 		get_tree().change_scene_to_file(RUTA_MAPA)        # no había reto en pausa

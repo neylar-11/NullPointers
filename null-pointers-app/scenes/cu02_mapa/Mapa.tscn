@@ -70,6 +70,7 @@ grosor = 2.5
 [node name="LblTituloBarra" type="Label" parent="PanelMapa/Columna/Encabezado"]
 layout_mode = 2
 text = "Mapa de módulos"
+unique_name_in_owner = true
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"Subtitulo"
@@ -115,6 +116,7 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Ingeniería de Software"
 theme_type_variation = &"EtiquetaAzul"
+unique_name_in_owner = true
 
 [node name="AreaMapa" type="Control" parent="PanelMapa/Columna"]
 layout_mode = 2

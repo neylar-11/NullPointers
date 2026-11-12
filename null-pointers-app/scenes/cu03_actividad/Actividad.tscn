@@ -157,6 +157,43 @@ theme_type_variation = &"TituloSeccion"
 unique_name_in_owner = true
 autowrap_mode = 3
 
+[node name="PanelPistaTexto" type="PanelContainer" parent="PanelPregunta/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAmarilla"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="PanelPregunta/Columna/PanelPistaTexto"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Icono" type="Control" parent="PanelPregunta/Columna/PanelPistaTexto/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(28, 28)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "info"
+color = Color(0.851, 0.4667, 0.0235, 1)
+grosor = 2.5
+size_flags_vertical = 0
+
+[node name="T" type="VBoxContainer" parent="PanelPregunta/Columna/PanelPistaTexto/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="Etq" type="Label" parent="PanelPregunta/Columna/PanelPistaTexto/Fila/T"]
+layout_mode = 2
+text = "PISTA · RECUERDA EL CONCEPTO"
+theme_type_variation = &"EtiquetaAmarilla"
+
+[node name="LblPistaTexto" type="Label" parent="PanelPregunta/Columna/PanelPistaTexto/Fila/T"]
+layout_mode = 2
+text = "Un requerimiento no funcional describe una cualidad del sistema."
+theme_type_variation = &"TextoAmarilloNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
 [node name="Opciones" type="VBoxContainer" parent="PanelPregunta/Columna"]
 layout_mode = 2
 theme_override_constants/separation = 12
@@ -410,11 +447,24 @@ autowrap_mode = 3
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="BtnEnviar" type="Button" parent="PanelPregunta/Columna"]
+[node name="BotonesPregunta" type="HBoxContainer" parent="PanelPregunta/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+
+[node name="BtnPista" type="Button" parent="PanelPregunta/Columna/BotonesPregunta"]
+layout_mode = 2
+text = "Pista"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 92)
+
+[node name="BtnEnviar" type="Button" parent="PanelPregunta/Columna/BotonesPregunta"]
 layout_mode = 2
 text = "Enviar respuesta"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
 disabled = true
 
 [node name="BotonesRetro" type="HBoxContainer" parent="PanelPregunta/Columna"]
@@ -805,6 +855,186 @@ custom_minimum_size = Vector2(0, 88)
 [node name="BtnSeguirReto" type="Button" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
 layout_mode = 2
 text = "Seguir con el reto"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
+
+[node name="PanelPista" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelPista"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="BtnCerrarPistaFondo" type="Button" parent="PanelPista/Overlay"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="Hoja" type="PanelContainer" parent="PanelPista"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"Hoja"
+
+[node name="Columna" type="VBoxContainer" parent="PanelPista/Hoja"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroHandle" type="CenterContainer" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+
+[node name="Handle" type="PanelContainer" parent="PanelPista/Hoja/Columna/CentroHandle"]
+layout_mode = 2
+theme_type_variation = &"ChipGris"
+custom_minimum_size = Vector2(64, 6)
+
+[node name="LblPistaEtq" type="Label" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+text = "PEDIR UNA PISTA"
+theme_type_variation = &"EtiquetaAmarilla"
+
+[node name="LblPistaTitulo" type="Label" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+text = "Cada pista descuenta puntos de esta pregunta"
+theme_type_variation = &"TituloSeccion"
+autowrap_mode = 3
+
+[node name="LblPistaValor" type="Label" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+text = "Esta pregunta vale 20 pts"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="TarjetaRecordar" type="PanelContainer" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+unique_name_in_owner = true
+
+[node name="Fila" type="HBoxContainer" parent="PanelPista/Hoja/Columna/TarjetaRecordar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Caja" type="PanelContainer" parent="PanelPista/Hoja/Columna/TarjetaRecordar/Fila"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_type_variation = &"CajaIconoAzul"
+
+[node name="Icono" type="Control" parent="PanelPista/Hoja/Columna/TarjetaRecordar/Fila/Caja"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "libro"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.5
+
+[node name="T" type="VBoxContainer" parent="PanelPista/Hoja/Columna/TarjetaRecordar/Fila"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Titulo" type="Label" parent="PanelPista/Hoja/Columna/TarjetaRecordar/Fila/T"]
+layout_mode = 2
+mouse_filter = 2
+text = "Recordar el concepto"
+theme_type_variation = &"TituloTarjeta"
+
+[node name="LblRecordarSub" type="Label" parent="PanelPista/Hoja/Columna/TarjetaRecordar/Fila/T"]
+layout_mode = 2
+mouse_filter = 2
+text = "Una frase del concepto asociado · cuesta 25 % (−5 pts)"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="BtnPistaRecordar" type="Button" parent="PanelPista/Hoja/Columna/TarjetaRecordar"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="TarjetaDescartar" type="PanelContainer" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+unique_name_in_owner = true
+
+[node name="Fila" type="HBoxContainer" parent="PanelPista/Hoja/Columna/TarjetaDescartar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Caja" type="PanelContainer" parent="PanelPista/Hoja/Columna/TarjetaDescartar/Fila"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_type_variation = &"CajaIconoNaranja"
+
+[node name="Icono" type="Control" parent="PanelPista/Hoja/Columna/TarjetaDescartar/Fila/Caja"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "cerrar"
+color = Color(0.7608, 0.2549, 0.0471, 1)
+grosor = 2.5
+
+[node name="T" type="VBoxContainer" parent="PanelPista/Hoja/Columna/TarjetaDescartar/Fila"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Titulo" type="Label" parent="PanelPista/Hoja/Columna/TarjetaDescartar/Fila/T"]
+layout_mode = 2
+mouse_filter = 2
+text = "Descartar una opción"
+theme_type_variation = &"TituloTarjeta"
+
+[node name="LblDescartarSub" type="Label" parent="PanelPista/Hoja/Columna/TarjetaDescartar/Fila/T"]
+layout_mode = 2
+mouse_filter = 2
+text = "Elimina una respuesta incorrecta · cuesta 50 % (−10 pts)"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="BtnPistaDescartar" type="Button" parent="PanelPista/Hoja/Columna/TarjetaDescartar"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="LblPistaNota" type="Label" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+text = "Los descuentos se acumulan. Completar un módulo sin pistas da la insignia \"Sin ayuda\"."
+theme_type_variation = &"TextoTerciario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="BtnCerrarPista" type="Button" parent="PanelPista/Hoja/Columna"]
+layout_mode = 2
+text = "Cancelar"
 theme_type_variation = &"BotonSecundario"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 88)

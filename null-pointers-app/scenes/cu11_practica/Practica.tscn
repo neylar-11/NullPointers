@@ -1,0 +1,702 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu11_practica/practica.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Anillo.gd" id="anillo"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Practica" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelEjercicio" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
+
+[node name="Columna" type="VBoxContainer" parent="PanelEjercicio"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="PanelEjercicio/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnSalir" type="Button" parent="PanelEjercicio/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="PanelEjercicio/Columna/Encabezado/BtnSalir"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "cerrar"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="CentroChip" type="CenterContainer" parent="PanelEjercicio/Columna/Encabezado"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ChipMateria" type="PanelContainer" parent="PanelEjercicio/Columna/Encabezado/CentroChip"]
+layout_mode = 2
+theme_type_variation = &"Chip"
+
+[node name="LblMateria" type="Label" parent="PanelEjercicio/Columna/Encabezado/CentroChip/ChipMateria"]
+layout_mode = 2
+text = "Práctica · Intro. a Ing. de Software"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="ChipPts" type="PanelContainer" parent="PanelEjercicio/Columna/Encabezado"]
+layout_mode = 2
+theme_type_variation = &"Chip"
+unique_name_in_owner = true
+size_flags_vertical = 4
+
+[node name="Fila" type="HBoxContainer" parent="PanelEjercicio/Columna/Encabezado/ChipPts"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icono" type="Control" parent="PanelEjercicio/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(18, 18)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "estrella"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.0
+size_flags_vertical = 4
+
+[node name="LblPuntosPractica" type="Label" parent="PanelEjercicio/Columna/Encabezado/ChipPts/Fila"]
+layout_mode = 2
+text = "0 pts"
+theme_type_variation = &"Negrita"
+unique_name_in_owner = true
+
+[node name="Progreso" type="HBoxContainer" parent="PanelEjercicio/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LblProgreso" type="Label" parent="PanelEjercicio/Columna/Progreso"]
+layout_mode = 2
+text = "Ejercicio 1 de 4"
+size_flags_horizontal = 3
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+
+[node name="LblTipo" type="Label" parent="PanelEjercicio/Columna/Progreso"]
+layout_mode = 2
+text = "CLASIFICAR"
+theme_type_variation = &"EtiquetaAzul"
+unique_name_in_owner = true
+
+[node name="Barra" type="ProgressBar" parent="PanelEjercicio/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+max_value = 4.0
+value = 1.0
+show_percentage = false
+
+[node name="Scroll" type="ScrollContainer" parent="PanelEjercicio/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="V" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="TarjetaEscenario" type="PanelContainer" parent="PanelEjercicio/Columna/Scroll/V"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAzul"
+unique_name_in_owner = true
+
+[node name="V" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll/V/TarjetaEscenario"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Etq" type="Label" parent="PanelEjercicio/Columna/Scroll/V/TarjetaEscenario/V"]
+layout_mode = 2
+text = "ESCENARIO"
+theme_type_variation = &"EtiquetaAzul"
+
+[node name="LblEscenarioTitulo" type="Label" parent="PanelEjercicio/Columna/Scroll/V/TarjetaEscenario/V"]
+layout_mode = 2
+text = "Biblioteca escolar"
+theme_type_variation = &"TituloTarjeta"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="LblEscenario" type="Label" parent="PanelEjercicio/Columna/Scroll/V/TarjetaEscenario/V"]
+layout_mode = 2
+text = "El cliente pide una app…"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="TarjetaInstruccion" type="PanelContainer" parent="PanelEjercicio/Columna/Scroll/V"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+
+[node name="V" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll/V/TarjetaInstruccion"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etq" type="Label" parent="PanelEjercicio/Columna/Scroll/V/TarjetaInstruccion/V"]
+layout_mode = 2
+text = "EJERCICIO"
+theme_type_variation = &"EtiquetaAzul"
+unique_name_in_owner = true
+
+[node name="LblInstruccion" type="Label" parent="PanelEjercicio/Columna/Scroll/V/TarjetaInstruccion/V"]
+layout_mode = 2
+text = "Clasifica cada requerimiento del cliente."
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="LblAyuda" type="Label" parent="PanelEjercicio/Columna/Scroll/V/TarjetaInstruccion/V"]
+layout_mode = 2
+text = "Toca la etiqueta de cada tarjeta para cambiar su categoría."
+theme_type_variation = &"Pequeno"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Area" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll/V"]
+layout_mode = 2
+theme_override_constants/separation = 10
+unique_name_in_owner = true
+
+[node name="PanelRetro" type="PanelContainer" parent="PanelEjercicio/Columna/Scroll/V"]
+layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
+unique_name_in_owner = true
+visible = false
+
+[node name="Fila" type="HBoxContainer" parent="PanelEjercicio/Columna/Scroll/V/PanelRetro"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="IconoRetro" type="Control" parent="PanelEjercicio/Columna/Scroll/V/PanelRetro/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(40, 40)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+unique_name_in_owner = true
+size_flags_vertical = 0
+
+[node name="Textos" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll/V/PanelRetro/Fila"]
+layout_mode = 2
+theme_override_constants/separation = 4
+size_flags_horizontal = 3
+
+[node name="LblRetroTitulo" type="Label" parent="PanelEjercicio/Columna/Scroll/V/PanelRetro/Fila/Textos"]
+layout_mode = 2
+text = "6 de 6 piezas correctas"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="LblRetroTexto" type="Label" parent="PanelEjercicio/Columna/Scroll/V/PanelRetro/Fila/Textos"]
+layout_mode = 2
+text = "Justificación…"
+theme_type_variation = &"TextoVerdeNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="E" type="Control" parent="PanelEjercicio/Columna/Scroll/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 8)
+
+[node name="BotonesEjercicio" type="HBoxContainer" parent="PanelEjercicio/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+
+[node name="BtnDeshacer" type="Button" parent="PanelEjercicio/Columna/BotonesEjercicio"]
+layout_mode = 2
+text = "Deshacer"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 92)
+visible = false
+
+[node name="BtnComprobar" type="Button" parent="PanelEjercicio/Columna/BotonesEjercicio"]
+layout_mode = 2
+text = "Comprobar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+disabled = true
+
+[node name="BotonesRetro" type="HBoxContainer" parent="PanelEjercicio/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 12
+unique_name_in_owner = true
+visible = false
+
+[node name="BtnVerTeoria" type="Button" parent="PanelEjercicio/Columna/BotonesRetro"]
+layout_mode = 2
+text = "Ver teoría"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+
+[node name="BtnContinuar" type="Button" parent="PanelEjercicio/Columna/BotonesRetro"]
+layout_mode = 2
+text = "Siguiente ejercicio"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+size_flags_horizontal = 3
+
+[node name="PanelResultado" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+unique_name_in_owner = true
+visible = false
+
+[node name="Columna" type="VBoxContainer" parent="PanelResultado"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LblResMateria" type="Label" parent="PanelResultado/Columna"]
+layout_mode = 2
+text = "Práctica de ingeniero · Intro. a Ing. de Software"
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="LblResTitulo" type="Label" parent="PanelResultado/Columna"]
+layout_mode = 2
+text = "¡Materia dominada!"
+theme_type_variation = &"Titulo"
+unique_name_in_owner = true
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CentroAnillo" type="CenterContainer" parent="PanelResultado/Columna"]
+layout_mode = 2
+
+[node name="Anillo" type="Control" parent="PanelResultado/Columna/CentroAnillo"]
+layout_mode = 2
+custom_minimum_size = Vector2(220, 220)
+unique_name_in_owner = true
+script = ExtResource("anillo")
+porcentaje = 80.0
+grosor = 14.0
+
+[node name="VA" type="VBoxContainer" parent="PanelResultado/Columna/CentroAnillo/Anillo"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -46.0
+offset_right = 90.0
+offset_bottom = 46.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="LblResPorcentaje" type="Label" parent="PanelResultado/Columna/CentroAnillo/Anillo/VA"]
+layout_mode = 2
+text = "80 %"
+theme_type_variation = &"Enorme"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="LblResSub" type="Label" parent="PanelResultado/Columna/CentroAnillo/Anillo/VA"]
+layout_mode = 2
+text = "de piezas correctas"
+theme_type_variation = &"Pequeno"
+horizontal_alignment = 1
+
+[node name="Tiles" type="HBoxContainer" parent="PanelResultado/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="T1" type="PanelContainer" parent="PanelResultado/Columna/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TileBlanco"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/Tiles/T1"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LblResPuntos" type="Label" parent="PanelResultado/Columna/Tiles/T1/V"]
+layout_mode = 2
+text = "80"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="PanelResultado/Columna/Tiles/T1/V"]
+layout_mode = 2
+text = "Puntos obtenidos"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="T2" type="PanelContainer" parent="PanelResultado/Columna/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TileBlanco"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/Tiles/T2"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LblResPiezas" type="Label" parent="PanelResultado/Columna/Tiles/T2/V"]
+layout_mode = 2
+text = "16/20"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="PanelResultado/Columna/Tiles/T2/V"]
+layout_mode = 2
+text = "Piezas correctas"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="T3" type="PanelContainer" parent="PanelResultado/Columna/Tiles"]
+layout_mode = 2
+theme_type_variation = &"TileBlanco"
+size_flags_horizontal = 3
+
+[node name="V" type="VBoxContainer" parent="PanelResultado/Columna/Tiles/T3"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LblResIntentos" type="Label" parent="PanelResultado/Columna/Tiles/T3/V"]
+layout_mode = 2
+text = "1"
+theme_type_variation = &"Numero"
+unique_name_in_owner = true
+horizontal_alignment = 1
+
+[node name="Etq" type="Label" parent="PanelResultado/Columna/Tiles/T3/V"]
+layout_mode = 2
+text = "Intentos"
+theme_type_variation = &"Pequeno"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="PanelEstado" type="PanelContainer" parent="PanelResultado/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaVerde"
+unique_name_in_owner = true
+
+[node name="F1" type="HBoxContainer" parent="PanelResultado/Columna/PanelEstado"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="IconoEstado" type="Control" parent="PanelResultado/Columna/PanelEstado/F1"]
+layout_mode = 2
+custom_minimum_size = Vector2(36, 36)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "check"
+color = Color(1, 1, 1, 1)
+grosor = 3.0
+fondo = Color(0.0902, 0.5412, 0.298, 1)
+unique_name_in_owner = true
+size_flags_vertical = 0
+
+[node name="T" type="VBoxContainer" parent="PanelResultado/Columna/PanelEstado/F1"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="LblResEstado" type="Label" parent="PanelResultado/Columna/PanelEstado/F1/T"]
+layout_mode = 2
+text = "Materia dominada"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="LblResDetalle" type="Label" parent="PanelResultado/Columna/PanelEstado/F1/T"]
+layout_mode = 2
+text = "Alcanzaste el mínimo de 70 %"
+theme_type_variation = &"TextoVerdeNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="ScrollResumen" type="ScrollContainer" parent="PanelResultado/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Resumen" type="VBoxContainer" parent="PanelResultado/Columna/ScrollResumen"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+unique_name_in_owner = true
+
+[node name="TarjetaTotal" type="PanelContainer" parent="PanelResultado/Columna"]
+layout_mode = 2
+theme_type_variation = &"Tarjeta"
+
+[node name="F" type="HBoxContainer" parent="PanelResultado/Columna/TarjetaTotal"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="T" type="VBoxContainer" parent="PanelResultado/Columna/TarjetaTotal/F"]
+layout_mode = 2
+theme_override_constants/separation = 2
+size_flags_horizontal = 3
+
+[node name="Etq" type="Label" parent="PanelResultado/Columna/TarjetaTotal/F/T"]
+layout_mode = 2
+text = "Puntuación total del perfil"
+theme_type_variation = &"Pequeno"
+
+[node name="LblResTotal" type="Label" parent="PanelResultado/Columna/TarjetaTotal/F/T"]
+layout_mode = 2
+text = "340 pts"
+theme_type_variation = &"TituloTarjeta"
+unique_name_in_owner = true
+
+[node name="ChipDelta" type="PanelContainer" parent="PanelResultado/Columna/TarjetaTotal/F"]
+layout_mode = 2
+theme_type_variation = &"ChipVerde"
+unique_name_in_owner = true
+size_flags_vertical = 4
+
+[node name="LblResDelta" type="Label" parent="PanelResultado/Columna/TarjetaTotal/F/ChipDelta"]
+layout_mode = 2
+text = "+80"
+theme_type_variation = &"TextoVerde"
+unique_name_in_owner = true
+
+[node name="BtnReintentar" type="Button" parent="PanelResultado/Columna"]
+layout_mode = 2
+text = "Reintentar"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+
+[node name="BtnVolverMapa" type="Button" parent="PanelResultado/Columna"]
+layout_mode = 2
+text = "Volver al mapa"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 92)
+
+[node name="PanelSalir" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelSalir"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelSalir"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelSalir/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelSalir/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(620, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelSalir/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="IconoAlerta" type="Control" parent="PanelSalir/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(76, 76)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "alerta"
+color = Color(0.7608, 0.2549, 0.0471, 1)
+grosor = 3.0
+fondo = Color(0.9922, 0.9451, 0.9176, 1)
+
+[node name="LblSalirTitulo" type="Label" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "¿Salir de la práctica?"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+
+[node name="LblSalirTexto" type="Label" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Si sales ahora, este intento se descartará y no se guardarán los puntos obtenidos."
+theme_type_variation = &"Subtitulo"
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="BtnSalirConfirmar" type="Button" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Salir y volver al mapa"
+theme_type_variation = &"BotonNaranja"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
+
+[node name="BtnSeguir" type="Button" parent="PanelSalir/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Seguir con la práctica"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
+
+[node name="PanelTeoria" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelTeoria"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="BtnCerrarTeoriaFondo" type="Button" parent="PanelTeoria/Overlay"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="Hoja" type="PanelContainer" parent="PanelTeoria"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"Hoja"
+
+[node name="Columna" type="VBoxContainer" parent="PanelTeoria/Hoja"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CentroHandle" type="CenterContainer" parent="PanelTeoria/Hoja/Columna"]
+layout_mode = 2
+
+[node name="Handle" type="PanelContainer" parent="PanelTeoria/Hoja/Columna/CentroHandle"]
+layout_mode = 2
+theme_type_variation = &"ChipGris"
+custom_minimum_size = Vector2(64, 6)
+
+[node name="LblTeoriaEtq" type="Label" parent="PanelTeoria/Hoja/Columna"]
+layout_mode = 2
+text = "CONCEPTO"
+theme_type_variation = &"EtiquetaAzul"
+unique_name_in_owner = true
+
+[node name="LblTeoriaTitulo" type="Label" parent="PanelTeoria/Hoja/Columna"]
+layout_mode = 2
+text = "Requerimientos no funcionales"
+theme_type_variation = &"TituloSeccion"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="LblTeoriaTexto" type="Label" parent="PanelTeoria/Hoja/Columna"]
+layout_mode = 2
+text = "Explicación…"
+theme_type_variation = &"Subtitulo"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="TarjetaTruco" type="PanelContainer" parent="PanelTeoria/Hoja/Columna"]
+layout_mode = 2
+theme_type_variation = &"TarjetaAmarilla"
+
+[node name="LblTeoriaTruco" type="Label" parent="PanelTeoria/Hoja/Columna/TarjetaTruco"]
+layout_mode = 2
+text = "Truco rápido: …"
+theme_type_variation = &"TextoAmarilloNormal"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="BtnCerrarTeoria" type="Button" parent="PanelTeoria/Hoja/Columna"]
+layout_mode = 2
+text = "Volver a la práctica"
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
