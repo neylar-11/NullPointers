@@ -23,7 +23,7 @@
 
 extends Node
 
-const RUTA_BD := "user://nullpointers_bd.json"
+var ruta_bd := "user://nullpointers_bd.json"   # variable para que las pruebas usen user://test_bd.json
 const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mockups / CU-03)
 
 var bd: Dictionary = {}
@@ -52,8 +52,8 @@ func _ready() -> void:
 #  PERSISTENCIA (RNF-02: no perder progreso ante cierres inesperados)
 # =====================================================================
 func cargar_bd() -> void:
-	if FileAccess.file_exists(RUTA_BD):
-		var archivo := FileAccess.open(RUTA_BD, FileAccess.READ)
+	if FileAccess.file_exists(ruta_bd):
+		var archivo := FileAccess.open(ruta_bd, FileAccess.READ)
 		var datos = JSON.parse_string(archivo.get_as_text())
 		archivo.close()
 		if datos is Dictionary and datos.has("modulos"):
@@ -79,7 +79,7 @@ func cargar_bd() -> void:
 	guardar_bd()
 
 func guardar_bd() -> void:
-	var archivo := FileAccess.open(RUTA_BD, FileAccess.WRITE)
+	var archivo := FileAccess.open(ruta_bd, FileAccess.WRITE)
 	archivo.store_string(JSON.stringify(bd, "\t"))
 	archivo.close()
 
