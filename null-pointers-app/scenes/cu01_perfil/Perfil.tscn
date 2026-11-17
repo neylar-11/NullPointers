@@ -622,7 +622,8 @@ theme_type_variation = &"TituloSeccion"
 
 [node name="LblSub" type="Label" parent="PanelFoto/Columna"]
 layout_mode = 2
-text = "Selecciona uno del catálogo predefinido."
+unique_name_in_owner = true
+text = "6 disponibles desde el inicio; los demás se desbloquean al avanzar en los temas."
 theme_type_variation = &"Subtitulo"
 autowrap_mode = 3
 
@@ -630,290 +631,22 @@ autowrap_mode = 3
 layout_mode = 2
 custom_minimum_size = Vector2(0, 6)
 
-[node name="GridAvatares" type="GridContainer" parent="PanelFoto/Columna"]
+[node name="ScrollAvatares" type="ScrollContainer" parent="PanelFoto/Columna"]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="GridAvatares" type="GridContainer" parent="PanelFoto/Columna/ScrollAvatares"]
+layout_mode = 2
+size_flags_horizontal = 3
 unique_name_in_owner = true
 columns = 3
-
-[node name="Btn1" type="Button" parent="PanelFoto/Columna/GridAvatares"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 176)
-size_flags_horizontal = 3
-theme_type_variation = &"BotonAvatar"
-toggle_mode = true
-
-[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn1"]
-layout_mode = 1
-custom_minimum_size = Vector2(110, 110)
-mouse_filter = 2
-script = ExtResource("avatar")
-avatar_id = "avatar_01"
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -55.0
-offset_top = -68.0
-offset_right = 55.0
-offset_bottom = 42.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn1"]
-layout_mode = 1
-custom_minimum_size = Vector2(26, 26)
-mouse_filter = 2
-script = ExtResource("icono")
-tipo = "check"
-color = Color(0.1843, 0.3333, 0.902, 1)
-grosor = 3.0
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -13.0
-offset_top = -40.0
-offset_right = 13.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="Btn2" type="Button" parent="PanelFoto/Columna/GridAvatares"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 176)
-size_flags_horizontal = 3
-theme_type_variation = &"BotonAvatar"
-toggle_mode = true
-
-[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn2"]
-layout_mode = 1
-custom_minimum_size = Vector2(110, 110)
-mouse_filter = 2
-script = ExtResource("avatar")
-avatar_id = "avatar_02"
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -55.0
-offset_top = -68.0
-offset_right = 55.0
-offset_bottom = 42.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn2"]
-layout_mode = 1
-custom_minimum_size = Vector2(26, 26)
-mouse_filter = 2
-script = ExtResource("icono")
-tipo = "check"
-color = Color(0.1843, 0.3333, 0.902, 1)
-grosor = 3.0
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -13.0
-offset_top = -40.0
-offset_right = 13.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="Btn3" type="Button" parent="PanelFoto/Columna/GridAvatares"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 176)
-size_flags_horizontal = 3
-theme_type_variation = &"BotonAvatar"
-toggle_mode = true
-
-[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn3"]
-layout_mode = 1
-custom_minimum_size = Vector2(110, 110)
-mouse_filter = 2
-script = ExtResource("avatar")
-avatar_id = "avatar_03"
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -55.0
-offset_top = -68.0
-offset_right = 55.0
-offset_bottom = 42.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn3"]
-layout_mode = 1
-custom_minimum_size = Vector2(26, 26)
-mouse_filter = 2
-script = ExtResource("icono")
-tipo = "check"
-color = Color(0.1843, 0.3333, 0.902, 1)
-grosor = 3.0
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -13.0
-offset_top = -40.0
-offset_right = 13.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="Btn4" type="Button" parent="PanelFoto/Columna/GridAvatares"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 176)
-size_flags_horizontal = 3
-theme_type_variation = &"BotonAvatar"
-toggle_mode = true
-
-[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn4"]
-layout_mode = 1
-custom_minimum_size = Vector2(110, 110)
-mouse_filter = 2
-script = ExtResource("avatar")
-avatar_id = "avatar_04"
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -55.0
-offset_top = -68.0
-offset_right = 55.0
-offset_bottom = 42.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn4"]
-layout_mode = 1
-custom_minimum_size = Vector2(26, 26)
-mouse_filter = 2
-script = ExtResource("icono")
-tipo = "check"
-color = Color(0.1843, 0.3333, 0.902, 1)
-grosor = 3.0
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -13.0
-offset_top = -40.0
-offset_right = 13.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="Btn5" type="Button" parent="PanelFoto/Columna/GridAvatares"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 176)
-size_flags_horizontal = 3
-theme_type_variation = &"BotonAvatar"
-toggle_mode = true
-
-[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn5"]
-layout_mode = 1
-custom_minimum_size = Vector2(110, 110)
-mouse_filter = 2
-script = ExtResource("avatar")
-avatar_id = "avatar_05"
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -55.0
-offset_top = -68.0
-offset_right = 55.0
-offset_bottom = 42.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn5"]
-layout_mode = 1
-custom_minimum_size = Vector2(26, 26)
-mouse_filter = 2
-script = ExtResource("icono")
-tipo = "check"
-color = Color(0.1843, 0.3333, 0.902, 1)
-grosor = 3.0
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -13.0
-offset_top = -40.0
-offset_right = 13.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="Btn6" type="Button" parent="PanelFoto/Columna/GridAvatares"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 176)
-size_flags_horizontal = 3
-theme_type_variation = &"BotonAvatar"
-toggle_mode = true
-
-[node name="Avatar" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn6"]
-layout_mode = 1
-custom_minimum_size = Vector2(110, 110)
-mouse_filter = 2
-script = ExtResource("avatar")
-avatar_id = "avatar_06"
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -55.0
-offset_top = -68.0
-offset_right = 55.0
-offset_bottom = 42.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Check" type="Control" parent="PanelFoto/Columna/GridAvatares/Btn6"]
-layout_mode = 1
-custom_minimum_size = Vector2(26, 26)
-mouse_filter = 2
-script = ExtResource("icono")
-tipo = "check"
-color = Color(0.1843, 0.3333, 0.902, 1)
-grosor = 3.0
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -13.0
-offset_top = -40.0
-offset_right = 13.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 0
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
 
 [node name="E3" type="Control" parent="PanelFoto/Columna"]
 layout_mode = 2
-size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 6)
 
 [node name="BtnUsarAvatar" type="Button" parent="PanelFoto/Columna"]
 layout_mode = 2

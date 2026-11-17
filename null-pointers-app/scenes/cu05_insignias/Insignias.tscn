@@ -151,12 +151,10 @@ layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Cuadricula" type="GridContainer" parent="Margen/Columna/Scroll"]
+[node name="Secciones" type="VBoxContainer" parent="Margen/Columna/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-columns = 3
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 12
+theme_override_constants/separation = 10
 unique_name_in_owner = true
 
 [node name="BtnJugar" type="Button" parent="Margen/Columna"]
@@ -262,15 +260,18 @@ theme_override_constants/separation = 6
 
 [node name="Etq" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/TarjetaCondicion/V"]
 layout_mode = 2
-text = "CONDICIÓN PARA OBTENERLA"
+text = "NIVELES"
 theme_type_variation = &"Etiqueta"
+unique_name_in_owner = true
 
-[node name="LblDetCondicion" type="Label" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/TarjetaCondicion/V"]
+[node name="LblDetCondicion" type="RichTextLabel" parent="PanelDetalle/MargenModal/Centro/Modal/Columna/TarjetaCondicion/V"]
 layout_mode = 2
 text = "Condición."
 theme_type_variation = &"Negrita"
 unique_name_in_owner = true
-autowrap_mode = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 
 [node name="E" type="Control" parent="PanelDetalle/MargenModal/Centro/Modal/Columna"]
 layout_mode = 2

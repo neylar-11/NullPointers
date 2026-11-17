@@ -437,8 +437,14 @@ func _terminar_reto() -> void:
 	if not nuevas.is_empty():
 		var nombres: Array = []
 		for i in nuevas:
-			nombres.append(i["titulo"])
-		%LblResDetalle.text += "\nNueva insignia: %s" % ", ".join(nombres)
+			nombres.append("%s (%s)" % [i["titulo"], JuegoRepository.nombre_nivel(int(i.get("nivel", 1)))])
+		%LblResDetalle.text += "\nInsignia: %s" % ", ".join(nombres)
+	var avatares: Array = res.get("avatares_nuevos", [])
+	if not avatares.is_empty():
+		var nombres_av: Array = []
+		for a in avatares:
+			nombres_av.append(a["nombre"])
+		%LblResDetalle.text += "\nNuevo avatar desbloqueado: %s (cámbialo en tu perfil)" % ", ".join(nombres_av)
 
 	%LblResTotal.text = "%d pts" % res["puntos_totales"]
 	if res["puntos_sumados"] > 0:
