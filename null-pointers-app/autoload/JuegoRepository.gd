@@ -32,7 +32,7 @@
 extends Node
 
 const RUTA_BD := "user://nullpointers_bd.json"
-const ESQUEMA := 4                   # versión del esquema de la BD (Sprint 3 · temas)
+const ESQUEMA := 5                   # versión del esquema de la BD (Sprint 3 · temas + niveles de insignias)
 const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mockups / CU-03)
 const PREGUNTAS_POR_QUIZ := 5        # preguntas que sortea cada intento de quiz
 const EJERCICIOS_PRACTICA := 4       # ejercicios que sortea cada intento de práctica (CU-11)
@@ -71,12 +71,14 @@ func cargar_bd() -> void:
 		var datos = JSON.parse_string(archivo.get_as_text())
 		archivo.close()
 		if datos is Dictionary and datos.has("modulos"):
-			if int(datos.get("esquema", 1)) < ESQUEMA:
+			if int(datos.get("esquema", 1)) < 4:
 				bd = _migrar_a_temas(datos)      # BD de Sprint 1, 2 o 3 (materias)
 			else:
 				bd = datos
-				_refrescar_contenido()
+				_refrescar_contenido()           # esquema 4 → 5: insignias con niveles, avatares
+				bd["esquema"] = ESQUEMA
 			evaluar_insignias()
+			_evaluar_avatares()
 			guardar_bd()
 			return
 	# Primera vez (o archivo corrupto): crear BD inicial
@@ -121,8 +123,13 @@ func _refrescar_contenido() -> void:
 		if encontrada.is_empty():
 			bd["insignias"].append(ins_ini)
 		else:
-			for k in ["titulo", "descripcion", "condicion", "icono", "color"]:
-				encontrada[k] = ins_ini[k]
+			for k in ["titulo", "descripcion", "condicion", "condiciones", "icono", "color", "tipo", "metrica", "niveles", "unidad"]:
+				if ins_ini.has(k):
+					encontrada[k] = ins_ini[k]
+			if ins_ini.has("id_tema"):
+				encontrada["id_tema"] = ins_ini["id_tema"]
+			if not encontrada.has("nivel"):
+				encontrada["nivel"] = 1 if encontrada.get("obtenida", false) else 0
 	for p_ini in inicial["practicas"]:
 		var p := obtener_practica(int(p_ini["id_tema"]))
 		if p.is_empty():
@@ -177,6 +184,7 @@ func _migrar_a_temas(vieja: Dictionary) -> Dictionary:
 			for ins in nueva["insignias"]:
 				if ins["id"] == ins_vieja["id"]:
 					ins["obtenida"] = true
+					ins["nivel"] = maxi(int(ins_vieja.get("nivel", 1)), 1)
 					ins["fecha"] = ins_vieja.get("fecha", "")
 	# Errores (CU-09): solo de preguntas que siguen existiendo
 	for e in vieja.get("errores", []):
@@ -304,7 +312,7 @@ const ALIAS_MIN := 3
 const ALIAS_MAX := 20
 const CONTRASENA_MIN := 4
 const CONTRASENA_MAX := 8
-const AVATARES := ["avatar_01", "avatar_02", "avatar_03", "avatar_04", "avatar_05", "avatar_06"]
+## Catálogo de avatares: ver Avatar.CATALOGO (14; 8 se desbloquean al avanzar).
 
 func existe_perfil() -> bool:
 	return bd["perfil_jugador"]["alias"] != ""
@@ -334,13 +342,52 @@ func actualizar_nombre(nuevo_alias: String) -> bool:
 	guardar_bd()
 	return true
 
-## Cambia el avatar (debe ser uno del catálogo Avatar.CATALOGO).
+## Cambia el avatar (debe ser uno del catálogo Avatar.CATALOGO y estar desbloqueado).
 func actualizar_avatar(avatar_id: String) -> bool:
-	if not AVATARES.has(avatar_id):
+	if not Avatar.ids().has(avatar_id) or not avatar_disponible(avatar_id):
 		return false
 	bd["perfil_jugador"]["avatar_id"] = avatar_id
 	guardar_bd()
 	return true
+
+## ¿El avatar ya se desbloqueó? Los 6 básicos siempre; los demás según su requisito
+## (temas completos, temas dominados, módulos sin pistas, medallas de oro, retos terminados).
+func avatar_disponible(avatar_id: String) -> bool:
+	var info := Avatar.info(avatar_id)
+	var req: Dictionary = info["requisito"]
+	if str(req["tipo"]) == "":
+		return true
+	var m := _metricas()
+	return int(m.get(str(req["tipo"]), 0)) >= int(req["valor"])
+
+## Catálogo de avatares con su estado para la pantalla de perfil (CU-01).
+func obtener_catalogo_avatares() -> Array:
+	var lista: Array = []
+	var m := _metricas()
+	for a in Avatar.CATALOGO:
+		var fila: Dictionary = a.duplicate(true)
+		var req: Dictionary = a["requisito"]
+		var valor: int = int(m.get(str(req["tipo"]), 0)) if str(req["tipo"]) != "" else 0
+		fila["disponible"] = str(req["tipo"]) == "" or valor >= int(req["valor"])
+		fila["progreso"] = valor
+		fila["meta"] = int(req["valor"])
+		lista.append(fila)
+	return lista
+
+## Avatares que se acaban de desbloquear (se llama después de evaluar insignias).
+func _evaluar_avatares() -> Array:
+	var nuevos: Array = []
+	if not bd.has("avatares_desbloqueados"):
+		bd["avatares_desbloqueados"] = []
+	for a in Avatar.CATALOGO:
+		var id: String = a["id"]
+		if bd["avatares_desbloqueados"].has(id):
+			continue
+		if avatar_disponible(id):
+			bd["avatares_desbloqueados"].append(id)
+			if str(a["requisito"]["tipo"]) != "":
+				nuevos.append(a)
+	return nuevos
 
 ## Guarda la contraseña si ambas coinciden y son válidas (4-8 dígitos).
 func actualizar_contrasena(c1: String, c2: String) -> bool:
@@ -478,12 +525,14 @@ func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pis
 	var practica_desbloqueada := completado and siguiente_desbloqueado.is_empty() \
 		and practica_disponible(id_tema) and int(obtener_practica_estado(id_tema)["intentos"]) == 0
 
-	# 5) Insignias que se desbloquean con este intento (CU-05)
+	# 5) Insignias que suben de nivel y avatares que se desbloquean con este intento (CU-05 / CU-01)
 	var insignias_nuevas := evaluar_insignias()
+	var avatares_nuevos := _evaluar_avatares()
 	guardar_bd()
 
 	return {
 		"aciertos": aciertos,
+		"avatares_nuevos": avatares_nuevos,
 		"total": total_preguntas,
 		"porcentaje": porcentaje,
 		"puntos": puntos,
@@ -576,6 +625,7 @@ func registrar_repaso(id_reactivo: int, acierto: bool) -> void:
 ## Paso 9 del CU-09: cierra la sesión de repaso (persistir + insignia si la lista quedó vacía).
 func terminar_repaso() -> Array:
 	var nuevas := evaluar_insignias()
+	_evaluar_avatares()
 	guardar_bd()
 	return nuevas
 
@@ -654,6 +704,14 @@ func registrar_consulta_teoria() -> void:
 func obtener_insignias() -> Array:
 	return bd["insignias"]
 
+## Insignias de un tipo: "logro" (12 generales) o "tema" (una medalla por tema).
+func obtener_insignias_tipo(tipo: String) -> Array:
+	var lista: Array = []
+	for i in bd["insignias"]:
+		if str(i.get("tipo", "logro")) == tipo:
+			lista.append(i)
+	return lista
+
 func insignias_obtenidas() -> int:
 	var n := 0
 	for i in bd["insignias"]:
@@ -661,70 +719,120 @@ func insignias_obtenidas() -> int:
 			n += 1
 	return n
 
-## Revisa la condición de cada insignia contra el progreso actual y marca
-## las que se acaban de cumplir. Regresa la lista de insignias recién obtenidas.
-## No se usa guardar_bd aquí: lo hace quien llama (registrar_intento / cargar_bd).
-func evaluar_insignias() -> Array:
-	var nuevas: Array = []
-	var completados := modulos_completados()
+const NOMBRES_NIVEL := ["Bloqueada", "Bronce", "Plata", "Oro"]
+const COLORES_NIVEL := ["#C9CDD9", "#B9722D", "#8E96A8", "#D9A21B"]
+
+static func nombre_nivel(nivel: int) -> String:
+	return NOMBRES_NIVEL[clampi(nivel, 0, 3)]
+
+static func color_nivel(nivel: int) -> Color:
+	return Color(COLORES_NIVEL[clampi(nivel, 0, 3)])
+
+## Cuántas medallas de tema están en un nivel dado (3 = oro).
+func medallas_en_nivel(nivel: int) -> int:
+	var n := 0
+	for i in obtener_insignias_tipo("tema"):
+		if int(i.get("nivel", 0)) >= nivel:
+			n += 1
+	return n
+
+## Todas las cifras del progreso que alimentan las insignias y los avatares.
+func _metricas() -> Dictionary:
 	var intentos: Array = bd["intentos_modulo"]
-	var total_modulos: int = bd["modulos"].size()
-
-	var hay_perfecto := false        # algún intento con 100 %
-	var hay_puzzle_perfecto := false
-	var hay_sin_pistas := false      # CU-10: algún módulo completado sin usar pistas
+	var perfectos := 0            # intentos con 100 %
+	var puzzles_perfectos := 0    # intentos con 100 % en módulos puzzle
+	var sin_pistas_mods := {}     # módulos completados sin pistas (distintos)
+	var primer_intento := 0       # módulos completados al primer intento
+	var vistos := {}
 	for i in intentos:
+		var id_mod := int(i["id_modulo"])
+		var m := obtener_modulo(id_mod)
 		if int(i["porcentaje"]) >= 100:
-			hay_perfecto = true
-			var m := obtener_modulo(int(i["id_modulo"]))
+			perfectos += 1
 			if not m.is_empty() and m["tipo"] == "puzzle":
-				hay_puzzle_perfecto = true
+				puzzles_perfectos += 1
 		if bool(i["completado"]) and int(i.get("pistas", 0)) == 0:
-			hay_sin_pistas = true
-	# "Analista": los tres módulos del tema 3 (Requerimientos) completados
-	var hay_requerimientos := modulos_completados_tema(3) >= obtener_modulos_tema(3).size() \
-		and not obtener_modulos_tema(3).is_empty()
-
-	var todos_perfectos := total_modulos > 0
+			sin_pistas_mods[id_mod] = true
+		if not vistos.has(id_mod):
+			vistos[id_mod] = true
+			if bool(i["completado"]):
+				primer_intento += 1
+	var modulos_perfectos := 0
 	for m in bd["modulos"]:
-		if int(m["mejor_puntaje"]) < 100:
-			todos_perfectos = false
-
-	# "Racha": un tema con sus tres módulos completados
-	var hay_tema_completo := false
+		if int(m["mejor_puntaje"]) >= 100:
+			modulos_perfectos += 1
+	var temas_completos := 0
 	for t in bd["temas"]:
 		var mods := obtener_modulos_tema(int(t["id"]))
 		if not mods.is_empty() and modulos_completados_tema(int(t["id"])) >= mods.size():
-			hay_tema_completo = true
-			break
+			temas_completos += 1
+	var corregidas := 0
+	for e in bd.get("errores", []):
+		if e["corregida"]:
+			corregidas += 1
+	# Analista: módulos completados del tema 3 (+1 si está dominado)
+	var analista := modulos_completados_tema(3) + (1 if tema_dominado(3) else 0)
+	var oros := 0
+	for i in bd["insignias"]:
+		if str(i.get("tipo", "logro")) == "tema" and int(i.get("nivel", 0)) >= 3:
+			oros += 1
+	return {
+		"modulos_completados": modulos_completados(),
+		"temas_completos": temas_completos,
+		"temas_dominados": temas_dominados(),
+		"retos_perfectos": perfectos,
+		"puzzles_perfectos": puzzles_perfectos,
+		"modulos_perfectos": modulos_perfectos,
+		"sin_pistas": sin_pistas_mods.size(),
+		"primer_intento": primer_intento,
+		"teoria": int(bd.get("teoria_consultas", 0)),
+		"intentos": intentos.size(),
+		"corregidas": corregidas,
+		"analista": analista,
+		"oros": oros,
+	}
 
-	# CU-09: hubo errores y la lista de pendientes quedó vacía
-	var errores: Array = bd.get("errores", [])
-	var lista_vaciada := not errores.is_empty() and obtener_errores_pendientes().is_empty()
-	# CU-11: al menos un tema dominado
-	var hay_dominado := temas_dominados() >= 1
+## Promedio del mejor puntaje de los módulos de un tema (0 si falta alguno por completar).
+func promedio_tema(id_tema: int) -> int:
+	var mods := obtener_modulos_tema(id_tema)
+	if mods.is_empty() or modulos_completados_tema(id_tema) < mods.size():
+		return 0
+	var suma := 0
+	for m in mods:
+		suma += int(m["mejor_puntaje"])
+	return int(round(float(suma) / float(mods.size())))
 
-	for ins in bd["insignias"]:
-		if ins["obtenida"]:
-			continue
-		var cumple := false
-		match ins["id"]:
-			"primer_paso":     cumple = completados >= 1
-			"punteria":        cumple = hay_perfecto
-			"armador":         cumple = hay_puzzle_perfecto
-			"estudioso":       cumple = int(bd.get("teoria_consultas", 0)) >= 5
-			"racha":           cumple = hay_tema_completo
-			"constante":       cumple = intentos.size() >= 10
-			"analista":        cumple = hay_requerimientos
-			"ingeniero":       cumple = completados >= total_modulos
-			"perfeccionista":  cumple = todos_perfectos
-			"repasador":       cumple = lista_vaciada            # CU-09
-			"sin_pistas":      cumple = hay_sin_pistas           # CU-10
-			"dominio":         cumple = hay_dominado             # CU-11
-		if cumple:
-			ins["obtenida"] = true
-			ins["fecha"] = Time.get_datetime_string_from_system()
-			nuevas.append(ins)
+## Revisa cada insignia contra el progreso y sube su nivel (bronce 1, plata 2, oro 3)
+## cuando el valor de su métrica alcanza el siguiente umbral. Regresa las insignias
+## que subieron de nivel (con el nivel nuevo). Las medallas de tema usan el promedio
+## del mejor puntaje de sus tres módulos (70 / 85 / 100 %).
+## No se usa guardar_bd aquí: lo hace quien llama (registrar_intento / cargar_bd).
+func evaluar_insignias() -> Array:
+	var nuevas: Array = []
+	var m := _metricas()
+	# Primero las medallas de tema (las de oro alimentan la métrica "oros")
+	for pasada in 2:
+		for ins in bd["insignias"]:
+			var tipo := str(ins.get("tipo", "logro"))
+			if (pasada == 0) != (tipo == "tema"):
+				continue
+			var valor := 0
+			if tipo == "tema":
+				valor = promedio_tema(int(ins["id_tema"]))
+			else:
+				valor = int(m.get(str(ins["metrica"]), 0))
+			ins["progreso"] = valor
+			var nivel := 0
+			for umbral in ins["niveles"]:
+				if valor >= int(umbral):
+					nivel += 1
+			if nivel > int(ins.get("nivel", 0)):
+				ins["nivel"] = nivel
+				ins["obtenida"] = true
+				ins["fecha"] = Time.get_datetime_string_from_system()
+				nuevas.append(ins)
+		if pasada == 0:
+			m = _metricas()
 	return nuevas
 
 
@@ -842,8 +950,10 @@ func registrar_intento_practica(id_tema: int, piezas_correctas: int, piezas_tota
 		p["dominada"] = true
 
 	var insignias_nuevas := evaluar_insignias()
+	var avatares_nuevos := _evaluar_avatares()
 	guardar_bd()
 	return {
+		"avatares_nuevos": avatares_nuevos,
 		"porcentaje": porcentaje,
 		"puntos": puntos,
 		"puntos_maximos": PUNTOS_PRACTICA,
@@ -1875,21 +1985,48 @@ func _bd_inicial() -> Dictionary:
 				["Consentimiento", "Datos mínimos", "Hash"],
 				"Si no lo necesitas, no lo pidas; si lo guardas, protégelo."),
 		],
+		# ---- CU-05: insignias con niveles bronce / plata / oro ----
 		"insignias": [
-			_insignia("primer_paso", "Primer paso", "Diste el primer paso en tu formación como ingeniero de software.", "Completa tu primer módulo con al menos 70 %.", "estrella", "#2F55E6"),
-			_insignia("punteria", "Puntería", "Reconoce la precisión: resolviste un reto completo sin fallar una sola pregunta.", "Acierta todas las preguntas de un reto (100 % en un solo intento).", "check", "#178A4C"),
-			_insignia("armador", "Armador", "Armaste un puzzle completo sin errores.", "Completa un módulo tipo puzzle con 100 %.", "puzzle", "#7C3AED"),
-			_insignia("estudioso", "Estudioso", "Repasar la teoría es de ingenieros: consultaste los conceptos varias veces.", "Consulta la teoría 5 veces desde un reto.", "libro", "#0E7490"),
-			_insignia("racha", "Racha", "Un tema completo: Quiz I, Quiz II y Puzzle sin dejar huecos en el mapa.", "Completa los tres módulos de un mismo tema.", "play", "#C2410C"),
-			_insignia("constante", "Constante", "La práctica hace al ingeniero: acumulaste diez intentos.", "Termina 10 retos (cuentan todos los intentos).", "reiniciar", "#D97706"),
-			_insignia("analista", "Analista", "Dominas los requerimientos funcionales y no funcionales.", "Completa los tres módulos del tema Requerimientos de software.", "quiz", "#2F55E6"),
-			_insignia("ingeniero", "Ingeniero", "Recorriste todos los mapas: completaste los módulos de los 12 temas.", "Completa todos los módulos de todos los temas con al menos 70 %.", "mapa", "#B45309"),
-			_insignia("perfeccionista", "Perfeccionista", "Nada se te escapó: 100 % en todos los módulos.", "Alcanza 100 % como mejor puntaje en todos los módulos.", "estrella", "#14633A"),
-			# Sprint 3
-			_insignia("repasador", "Repasador", "Corregiste todos tus errores: la lista de repaso quedó vacía.", "Deja en cero la lista de Repasar mis errores.", "reiniciar", "#0E7490"),
-			_insignia("sin_pistas", "Sin ayuda", "Completaste un módulo sin pedir ninguna pista.", "Completa un módulo (≥ 70 %) sin usar pistas.", "ojo", "#7C3AED"),
-			_insignia("dominio", "Dominio", "Resolviste la práctica de ingeniero y dominaste un tema.", "Aprueba (≥ 70 %) la práctica de ingeniero de un tema.", "puzzle", "#C2410C"),
+			# Logros generales: suben de nivel al alcanzar cada umbral de su métrica
+			_insignia("primer_paso", "Primer paso", "Cada módulo completado es un paso en tu formación como ingeniero de software.", "modulos_completados", [1, 6, 18], "módulos completados",
+				["Completa tu primer módulo (≥ 70 %)", "Completa 6 módulos", "Completa 18 módulos"], "estrella", "#2F55E6"),
+			_insignia("punteria", "Puntería", "Reconoce la precisión: retos resueltos sin fallar una sola pregunta.", "retos_perfectos", [1, 5, 15], "retos con 100 %",
+				["Logra 100 % en un reto", "Logra 100 % en 5 retos", "Logra 100 % en 15 retos"], "check", "#178A4C"),
+			_insignia("armador", "Armador", "Puzzles armados sin un solo error.", "puzzles_perfectos", [1, 4, 12], "puzzles con 100 %",
+				["Completa un puzzle con 100 %", "Completa 4 puzzles con 100 %", "Completa 12 puzzles con 100 %"], "puzzle", "#7C3AED"),
+			_insignia("estudioso", "Estudioso", "Repasar la teoría es de ingenieros: consultas de conceptos desde los retos.", "teoria", [5, 15, 40], "consultas de teoría",
+				["Consulta la teoría 5 veces", "Consulta la teoría 15 veces", "Consulta la teoría 40 veces"], "libro", "#0E7490"),
+			_insignia("racha", "A la primera", "Módulos completados en el primer intento, sin necesidad de repetirlos.", "primer_intento", [1, 5, 15], "módulos a la primera",
+				["Completa un módulo en el primer intento", "Completa 5 módulos a la primera", "Completa 15 módulos a la primera"], "play", "#C2410C"),
+			_insignia("constante", "Constante", "La práctica hace al ingeniero: retos terminados, cuenten como cuenten.", "intentos", [10, 30, 80], "retos terminados",
+				["Termina 10 retos", "Termina 30 retos", "Termina 80 retos"], "reiniciar", "#D97706"),
+			_insignia("analista", "Analista", "Dominas los requerimientos funcionales y no funcionales.", "analista", [1, 3, 4], "avance en Requerimientos",
+				["Completa un módulo del tema Requerimientos", "Completa los 3 módulos de Requerimientos", "Domina Requerimientos (aprueba su práctica)"], "quiz", "#2F55E6"),
+			_insignia("ingeniero", "Ingeniero", "Recorriste mapas completos: temas con sus tres módulos terminados.", "temas_completos", [1, 6, 12], "temas completos",
+				["Completa los 3 módulos de un tema", "Completa 6 temas", "Completa los 12 temas"], "mapa", "#B45309"),
+			_insignia("perfeccionista", "Perfeccionista", "Nada se te escapa: módulos con 100 % como mejor puntaje.", "modulos_perfectos", [3, 12, 36], "módulos con 100 %",
+				["Ten 100 % en 3 módulos", "Ten 100 % en 12 módulos", "Ten 100 % en los 36 módulos"], "estrella", "#14633A"),
+			_insignia("repasador", "Repasador", "Convertiste errores en aciertos en Repasar mis errores.", "corregidas", [5, 20, 50], "preguntas corregidas",
+				["Corrige 5 preguntas en el repaso", "Corrige 20 preguntas", "Corrige 50 preguntas"], "reiniciar", "#0E7490"),
+			_insignia("sin_pistas", "Sin ayuda", "Módulos completados sin pedir ninguna pista.", "sin_pistas", [1, 10, 36], "módulos sin pistas",
+				["Completa un módulo sin pistas", "Completa 10 módulos sin pistas", "Completa los 36 módulos sin pistas"], "ojo", "#7C3AED"),
+			_insignia("dominio", "Dominio", "Temas dominados con la práctica de ingeniero aprobada.", "temas_dominados", [1, 6, 12], "temas dominados",
+				["Domina un tema (práctica ≥ 70 %)", "Domina 6 temas", "Domina los 12 temas"], "puzzle", "#C2410C"),
+			# Medallas por tema: promedio del mejor puntaje de sus 3 módulos (bronce ≥ 70, plata ≥ 85, oro = 100)
+			_medalla_tema(1, "Fundamentos", "libro", "#2F55E6"),
+			_medalla_tema(2, "Ciclo de vida", "reiniciar", "#178A4C"),
+			_medalla_tema(3, "Requerimientos", "lapiz", "#7C3AED"),
+			_medalla_tema(4, "Modelado UML", "mapa", "#0E7490"),
+			_medalla_tema(5, "Diseño", "puzzle", "#C2410C"),
+			_medalla_tema(6, "Pruebas", "check", "#14633A"),
+			_medalla_tema(7, "Métricas", "quiz", "#D97706"),
+			_medalla_tema(8, "Gestión ágil", "play", "#B45309"),
+			_medalla_tema(9, "Calidad", "estrella", "#2F55E6"),
+			_medalla_tema(10, "Control de versiones", "guardar", "#178A4C"),
+			_medalla_tema(11, "Proyectos y riesgos", "alerta", "#7C3AED"),
+			_medalla_tema(12, "Ética", "ojo", "#0E7490"),
 		],
+		"avatares_desbloqueados": ["avatar_01", "avatar_02", "avatar_03", "avatar_04", "avatar_05", "avatar_06"],
 		# ---- CU-09: preguntas falladas pendientes de repaso ----
 		"errores": [],
 		# ---- Ejercicios de manipulación por tema (módulo Puzzle y práctica de ingeniero, CU-11) ----
@@ -2113,17 +2250,35 @@ func _concepto(id: String, id_tema: int, titulo: String, explicacion: String, cl
 		"truco": truco,            # truco rápido para recordarlo (también es la pista de CU-10)
 	}
 
-func _insignia(id: String, titulo: String, descripcion: String, condicion: String, icono: String, color: String) -> Dictionary:
+func _insignia(id: String, titulo: String, descripcion: String, metrica: String, niveles: Array, unidad: String, condiciones: Array, icono: String, color: String) -> Dictionary:
 	return {
 		"id": id,
+		"tipo": "logro",
 		"titulo": titulo,
 		"descripcion": descripcion,   # texto que se muestra al obtenerla
-		"condicion": condicion,       # "Cómo se obtiene" para las bloqueadas
+		"metrica": metrica,           # cifra del progreso que la hace subir de nivel (ver _metricas)
+		"niveles": niveles,           # umbrales [bronce, plata, oro]
+		"unidad": unidad,             # nombre de la cifra ("retos con 100 %")
+		"condiciones": condiciones,   # "Cómo se obtiene" por nivel
+		"condicion": condiciones[0],  # compatibilidad con pantallas anteriores
 		"icono": icono,               # tipo de Icono.gd
 		"color": color,
+		"nivel": 0,                   # 0 bloqueada · 1 bronce · 2 plata · 3 oro
+		"progreso": 0,
 		"obtenida": false,
 		"fecha": "",
 	}
+
+## Medalla de un tema: bronce / plata / oro según el promedio de sus módulos.
+func _medalla_tema(id_tema: int, corto: String, icono: String, color: String) -> Dictionary:
+	var ins := _insignia("tema_%d" % id_tema, "Medalla · %s" % corto,
+		"Dominas el tema %s: sus tres módulos completados." % corto,
+		"promedio_tema", [70, 85, 100], "% promedio",
+		["Completa los 3 módulos del tema con promedio ≥ 70 %", "Promedio ≥ 85 % en los 3 módulos", "100 % en los 3 módulos"],
+		icono, color)
+	ins["tipo"] = "tema"
+	ins["id_tema"] = id_tema
+	return ins
 
 func _modulo(id: int, nombre: String, tipo: String, descripcion: String, estado: String = "bloqueado", id_tema: int = 1, num_preguntas: int = PREGUNTAS_POR_QUIZ) -> Dictionary:
 	return {

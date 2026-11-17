@@ -8,6 +8,7 @@ const RUTA_MENU := "res://scenes/menu/Menu.tscn"
 
 var avatar_elegido := ""
 var grupo_avatares := ButtonGroup.new()
+var icono_script := preload("res://assets/ui/Icono.gd")
 var cambios := {"foto": false, "nombre": false, "contrasena": false}
 
 
@@ -32,9 +33,7 @@ func _ready() -> void:
 	%BtnVolverFoto.pressed.connect(_mostrar_menu_perfil.bind(false))
 	%BtnCancelarFoto.pressed.connect(_mostrar_menu_perfil.bind(false))
 	%BtnUsarAvatar.pressed.connect(_guardar_avatar)
-	for b in %GridAvatares.get_children():
-		b.button_group = grupo_avatares
-		b.toggled.connect(_on_avatar_toggled.bind(b))
+	_construir_catalogo_avatares()
 
 	# --- Contraseña ---
 	%BtnVolverContra.pressed.connect(_mostrar_menu_perfil.bind(false))
@@ -129,11 +128,105 @@ func _guardar_nombre() -> void:
 # ============================ FOTO ============================
 func _abrir_foto() -> void:
 	avatar_elegido = JuegoRepository.obtener_perfil().get("avatar_id", "avatar_01")
+	_construir_catalogo_avatares()
 	for b in %GridAvatares.get_children():
 		var es: bool = b.get_node("Avatar").avatar_id == avatar_elegido
 		b.set_pressed_no_signal(es)
 		b.get_node("Check").visible = es
 	_mostrar_panel(%PanelFoto)
+
+
+## Catálogo de 14 avatares: los desbloqueados se pueden elegir; los bloqueados se ven en gris
+## con un candado y la condición para conseguirlos (se desbloquean al avanzar en los temas).
+func _construir_catalogo_avatares() -> void:
+	for hijo in %GridAvatares.get_children():
+		hijo.queue_free()
+	var catalogo := JuegoRepository.obtener_catalogo_avatares()
+	var disponibles := 0
+	for a in catalogo:
+		if a["disponible"]:
+			disponibles += 1
+		%GridAvatares.add_child(_crear_boton_avatar(a))
+	%LblSub.text = "%d de %d avatares desbloqueados. Los demás se ganan avanzando en los temas." % [disponibles, catalogo.size()]
+
+
+func _crear_boton_avatar(a: Dictionary) -> Button:
+	var disponible: bool = a["disponible"]
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(0, 196)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.theme_type_variation = &"BotonAvatar"
+	b.toggle_mode = true
+	b.disabled = not disponible
+	b.button_group = grupo_avatares
+
+	var av := Avatar.new()
+	av.name = "Avatar"
+	av.avatar_id = a["id"]
+	av.bloqueado = not disponible
+	av.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	av.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	av.position = Vector2(0, 14)
+	av.size = Vector2(104, 104)
+	av.anchor_left = 0.5; av.anchor_right = 0.5
+	av.offset_left = -52; av.offset_right = 52
+	av.offset_top = 14; av.offset_bottom = 118
+	b.add_child(av)
+
+	var nombre := Label.new()
+	nombre.name = "Nombre"
+	nombre.text = a["nombre"]
+	nombre.theme_type_variation = &"Negrita" if disponible else &"TextoSecundario"
+	nombre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nombre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nombre.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	nombre.offset_top = 124; nombre.offset_bottom = 148
+	b.add_child(nombre)
+
+	var pie := Label.new()
+	pie.name = "Pie"
+	pie.theme_type_variation = &"Pequeno"
+	pie.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pie.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pie.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pie.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	pie.offset_left = 6; pie.offset_right = -6
+	pie.offset_top = 148; pie.offset_bottom = 192
+	if disponible:
+		pie.text = "" if int(a["meta"]) == 0 else "Desbloqueado"
+	else:
+		pie.text = "%s (%d/%d)" % [a["condicion"], int(a["progreso"]), int(a["meta"])]
+	b.add_child(pie)
+
+	var check := Control.new()
+	check.name = "Check"
+	check.set_script(icono_script)
+	check.tipo = "check"
+	check.color = Color("#2F55E6")
+	check.grosor = 3.0
+	check.visible = false
+	check.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	check.position = Vector2(8, 8)
+	check.size = Vector2(24, 24)
+	b.add_child(check)
+
+	if not disponible:
+		var candado := Control.new()
+		candado.set_script(icono_script)
+		candado.tipo = "candado"
+		candado.color = Color("#5B6178")
+		candado.fondo = Color.WHITE
+		candado.grosor = 2.0
+		candado.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		candado.position = Vector2(0, 0)
+		candado.size = Vector2(30, 30)
+		candado.anchor_left = 0.5; candado.anchor_right = 0.5
+		candado.offset_left = 24; candado.offset_right = 54
+		candado.offset_top = 86; candado.offset_bottom = 116
+		b.add_child(candado)
+
+	b.toggled.connect(_on_avatar_toggled.bind(b))
+	return b
 
 
 func _on_avatar_toggled(activo: bool, b: Button) -> void:
