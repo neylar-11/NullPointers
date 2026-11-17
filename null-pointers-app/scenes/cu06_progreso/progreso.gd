@@ -13,7 +13,7 @@
 extends Control
 
 const RUTA_MENU   := "res://scenes/menu/Menu.tscn"
-const RUTA_MAPA   := "res://scenes/cu08_materias/Materias.tscn"   # CU-08: "Ir a jugar" abre el catálogo de materias
+const RUTA_MAPA   := "res://scenes/cu08_temas/Temas.tscn"         # CU-08: "Ir a jugar" abre el catálogo de temas
 const RUTA_REPASO := "res://scenes/cu09_repaso/Repaso.tscn"       # CU-09
 
 const VERDE   := Color("#178A4C")
@@ -58,10 +58,10 @@ func _mostrar(p: Dictionary) -> void:
 	var errores: int = p.get("errores_pendientes", 0)
 	%BtnRepaso.visible = errores > 0
 	%BtnRepaso.text = "Repasar mis errores (%d)" % errores
-	# CU-11: materias dominadas en el subtítulo de la puntuación
-	var dominadas: int = p.get("materias_dominadas", 0)
-	if dominadas > 0:
-		%LblTotalSub.text = "%d materia%s dominada%s" % [dominadas, "" if dominadas == 1 else "s", "" if dominadas == 1 else "s"]
+	# CU-11: temas dominados en el subtítulo de la puntuación
+	var dominados: int = p.get("temas_dominados", 0)
+	if dominados > 0:
+		%LblTotalSub.text = "%d tema%s dominado%s" % [dominados, "" if dominados == 1 else "s", "" if dominados == 1 else "s"]
 
 	_llenar_lista(%ListaDominados, p["dominados"], true)
 	_llenar_lista(%ListaMejora, p["areas_mejora"], false)
@@ -109,7 +109,7 @@ func _crear_fila(f: Dictionary, dominado: bool) -> Control:
 	fila.add_child(textos)
 
 	var nombre := Label.new()
-	nombre.text = "%s · %s" % [f.get("materia", "Módulo %d" % int(f["id"])), f["nombre"]]
+	nombre.text = "%s · %s" % [f.get("tema", "Módulo %d" % int(f["id"])), f["nombre"]]
 	nombre.theme_type_variation = &"Negrita"
 	nombre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	textos.add_child(nombre)

@@ -4,9 +4,9 @@
 # Flujo (SRS 3.0):
 #   1.   Entra desde Mi progreso (CU-06) o desde el menú principal.
 #   2.   Se lee la lista de preguntas pendientes (falladas y no acertadas en repaso),
-#        agrupadas por materia y módulo, con conteos                     → _mostrar_lista()
-#   3.   "Iniciar repaso" (todas) o una materia en particular             → _iniciar()
-#   4-6. Se muestra la pregunta con su materia/módulo de origen, el alumno
+#        agrupadas por tema, con conteos                                → _mostrar_lista()
+#   3.   "Iniciar repaso" (todas) o un tema en particular                 → _iniciar()
+#   4-6. Se muestra la pregunta con su tema de origen, el alumno
 #        responde y el sistema evalúa                                     → _mostrar_pregunta() / _on_enviar()
 #   7.   Si quedan preguntas, regresa al paso 4                           → _on_continuar()
 #   8-9. Resumen (repasadas, aciertos, salieron) y se guarda el estado    → _terminar()
@@ -86,15 +86,15 @@ func _mostrar_lista() -> void:
 	%BtnIniciar.show()
 	%BtnVolverMenu.text = "Volver"
 	%LblTitulo.text = "Tienes %d pregunta%s por repasar" % [total, "" if total == 1 else "s"]
-	%LblSub.text = "Las preguntas que fallaste en los retos, agrupadas por materia. Cada una que aciertes aquí sale de la lista. El repaso no da puntos ni cambia tu mejor puntaje."
+	%LblSub.text = "Las preguntas que fallaste en los retos, agrupadas por tema. Cada una que aciertes aquí sale de la lista. El repaso no da puntos ni cambia tu mejor puntaje."
 	%BtnIniciar.text = "Iniciar repaso (todas · máx. %d)" % JuegoRepository.REPASO_MAXIMO
 
 	for grupo in JuegoRepository.obtener_resumen_errores():
-		%ListaMaterias.add_child(_crear_tarjeta_materia(grupo))
+		%ListaMaterias.add_child(_crear_tarjeta_tema(grupo))
 
 
-## Tarjeta de una materia con sus módulos y un botón "Repasar esta materia".
-func _crear_tarjeta_materia(g: Dictionary) -> Control:
+## Tarjeta de un tema con los conceptos implicados y un botón "Repasar este tema".
+func _crear_tarjeta_tema(g: Dictionary) -> Control:
 	var tarjeta := PanelContainer.new()
 	tarjeta.theme_type_variation = &"TileBlanco"
 	var col := VBoxContainer.new()
@@ -114,7 +114,7 @@ func _crear_tarjeta_materia(g: Dictionary) -> Control:
 	fila.add_child(punto)
 
 	var nombre := Label.new()
-	nombre.text = g["materia"]
+	nombre.text = g["tema"]
 	nombre.theme_type_variation = &"Negrita"
 	nombre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nombre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -130,26 +130,23 @@ func _crear_tarjeta_materia(g: Dictionary) -> Control:
 	fila.add_child(chip)
 
 	var detalle := Label.new()
-	var partes: Array = []
-	for m in g["modulos"]:
-		partes.append("%s (%d)" % [m["nombre"], int(m["errores"])])
-	detalle.text = " · ".join(partes)
+	detalle.text = " · ".join(g["conceptos"]) if not g["conceptos"].is_empty() else "Preguntas sin concepto asociado"
 	detalle.theme_type_variation = &"Pequeno"
 	detalle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(detalle)
 
 	var btn := Button.new()
-	btn.text = "Repasar esta materia"
+	btn.text = "Repasar este tema"
 	btn.theme_type_variation = &"BotonSecundario"
 	btn.custom_minimum_size = Vector2(0, 64)
-	btn.pressed.connect(_iniciar.bind(int(g["id_materia"])))
+	btn.pressed.connect(_iniciar.bind(int(g["id_tema"])))
 	col.add_child(btn)
 	return tarjeta
 
 
 # ============================ PASO 3: INICIAR ============================
-func _iniciar(id_materia: int) -> void:
-	var pendientes := JuegoRepository.obtener_errores_pendientes(id_materia)
+func _iniciar(id_tema: int) -> void:
+	var pendientes := JuegoRepository.obtener_errores_pendientes(id_tema)
 	if pendientes.is_empty():
 		return
 	cola.clear()
@@ -170,10 +167,13 @@ func _iniciar(id_materia: int) -> void:
 # ============================ PASO 4: PREGUNTA ============================
 func _mostrar_pregunta() -> void:
 	reactivo_actual = JuegoRepository.obtener_reactivo(cola[indice])
-	var modulo := JuegoRepository.obtener_modulo(int(reactivo_actual["id_modulo"]))
-	var materia := JuegoRepository.obtener_materia(int(modulo.get("id_materia", 1)))
+	var tema := JuegoRepository.obtener_tema(int(reactivo_actual["id_tema"]))
+	var concepto := JuegoRepository.obtener_concepto(int(reactivo_actual["id"]))
 	%LblProgreso.text = "Pregunta %d de %d" % [indice + 1, cola.size()]
-	%LblOrigen.text = ("%s · %s" % [materia.get("corto", ""), modulo.get("nombre", "")]).to_upper()
+	var origen: String = tema.get("corto", "")
+	if not concepto.is_empty():
+		origen += " · " + str(concepto["titulo"])
+	%LblOrigen.text = origen.to_upper()
 	%Barra.value = indice + 1
 	%LblPregunta.text = reactivo_actual["pregunta"]
 	%LblContador.text = "%d" % JuegoRepository.obtener_errores_pendientes().size()

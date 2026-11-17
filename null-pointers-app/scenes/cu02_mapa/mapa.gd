@@ -8,14 +8,16 @@
 #   Alt. bloqueado → requisito de desbloqueo                         → _mostrar_bloqueado()
 #
 # Sprint 3:
-#   CU-08: el mapa muestra SOLO los módulos de JuegoRepository.materia_seleccionada
-#          (la pone la pantalla de materias). "Volver" regresa al catálogo de materias.
+#   CU-08: el mapa muestra SOLO los módulos de JuegoRepository.tema_seleccionado
+#          (la pone la pantalla de temas). "Volver" regresa al catálogo de temas.
+#          Cada tema tiene Quiz I, Quiz II y Puzzle; el puzzle se juega con las
+#          mecánicas de manipulación (misma escena que la práctica, en modo módulo).
 #   CU-11: al final del mapa hay un nodo "Práctica de ingeniero" que se desbloquea
-#          cuando todos los módulos de la materia están completados.
+#          cuando todos los módulos del tema están completados.
 extends Control
 
 const RUTA_MENU      := "res://scenes/menu/Menu.tscn"
-const RUTA_MATERIAS  := "res://scenes/cu08_materias/Materias.tscn"
+const RUTA_TEMAS     := "res://scenes/cu08_temas/Temas.tscn"
 const RUTA_ACTIVIDAD := "res://scenes/cu03_actividad/Actividad.tscn"
 const RUTA_PRACTICA  := "res://scenes/cu11_practica/Practica.tscn"
 
@@ -29,8 +31,8 @@ const TAM_NODO := 84.0
 const COLUMNAS := [0.17, 0.5, 0.83, 0.5, 0.17, 0.5, 0.83, 0.5]
 const ID_PRACTICA := -1          # id ficticio del nodo final "Práctica de ingeniero" (CU-11)
 
-var id_materia: int = 1
-var materia: Dictionary = {}
+var id_tema: int = 1
+var tema: Dictionary = {}
 var modulos: Array = []
 var modulo_sel: Dictionary = {}
 var nodos: Array[Control] = []
@@ -48,26 +50,26 @@ func _ready() -> void:
 	_construir_mapa()
 
 
-## CU-08 paso 6: al volver del mapa se regresa al catálogo de materias (o al menú).
+## CU-08 paso 6: al volver del mapa se regresa al catálogo de temas (o al menú).
 func _volver() -> void:
-	if ResourceLoader.exists(RUTA_MATERIAS):
-		get_tree().change_scene_to_file(RUTA_MATERIAS)
+	if ResourceLoader.exists(RUTA_TEMAS):
+		get_tree().change_scene_to_file(RUTA_TEMAS)
 	else:
 		get_tree().change_scene_to_file(RUTA_MENU)
 
 
 # ============================== MAPA ==============================
 func _construir_mapa() -> void:
-	id_materia = JuegoRepository.materia_seleccionada
-	materia = JuegoRepository.obtener_materia(id_materia)
-	if materia.is_empty():
-		id_materia = 1
-		materia = JuegoRepository.obtener_materia(1)
-	modulos = JuegoRepository.obtener_modulos_materia(id_materia)
+	id_tema = JuegoRepository.tema_seleccionado
+	tema = JuegoRepository.obtener_tema(id_tema)
+	if tema.is_empty():
+		id_tema = 1
+		tema = JuegoRepository.obtener_tema(1)
+	modulos = JuegoRepository.obtener_modulos_tema(id_tema)
 	%LblPuntos.text = "%d pts" % JuegoRepository.obtener_puntos_totales()
-	%LblResumen.text = "%d de %d módulos completados" % [JuegoRepository.modulos_completados_materia(id_materia), modulos.size()]
-	%LblMateria.text = materia.get("corto", "")
-	%LblTituloBarra.text = "Mapa de módulos"
+	%LblResumen.text = "%d de %d módulos completados" % [JuegoRepository.modulos_completados_tema(id_tema), modulos.size()]
+	%LblMateria.text = tema.get("corto", "")
+	%LblTituloBarra.text = "Mapa del tema"
 
 	for n in nodos:
 		n.queue_free()
@@ -75,29 +77,29 @@ func _construir_mapa() -> void:
 
 	for m in modulos:
 		nodos.append(_crear_nodo(m))
-	# CU-11: nodo final de la práctica (solo si la materia tiene práctica)
-	if not JuegoRepository.obtener_practica(id_materia).is_empty():
+	# CU-11: nodo final de la práctica (solo si el tema tiene práctica)
+	if not JuegoRepository.obtener_practica(id_tema).is_empty():
 		nodos.append(_crear_nodo(_nodo_practica()))
 	_posicionar_nodos()
 
 
 ## Datos del nodo final "Práctica de ingeniero" (CU-11) con el mismo formato que un módulo.
 func _nodo_practica() -> Dictionary:
-	var estado_p := JuegoRepository.obtener_practica_estado(id_materia)
+	var estado_p := JuegoRepository.obtener_practica_estado(id_tema)
 	var estado := "bloqueado"
 	if estado_p["dominada"]:
 		estado = "completado"
-	elif JuegoRepository.practica_disponible(id_materia):
+	elif JuegoRepository.practica_disponible(id_tema):
 		estado = "desbloqueado"
-	var practica := JuegoRepository.obtener_practica(id_materia)
+	var practica := JuegoRepository.obtener_practica(id_tema)
 	return {
 		"id": ID_PRACTICA,
-		"id_materia": id_materia,
+		"id_tema": id_tema,
 		"nombre": "Práctica de ingeniero",
 		"tipo": "practica",
-		"descripcion": "Escenario: %s. %d ejercicios de manipulación (clasificar, construir, seleccionar)." % [
-			practica.get("titulo", ""), practica.get("ejercicios", []).size()],
-		"num_preguntas": practica.get("ejercicios", []).size(),
+		"descripcion": "Escenario: %s. %d ejercicios al azar de manipulación (clasificar, construir, ordenar, seleccionar)." % [
+			practica.get("titulo", ""), JuegoRepository.EJERCICIOS_PRACTICA],
+		"num_preguntas": JuegoRepository.EJERCICIOS_PRACTICA,
 		"puntos_maximos": JuegoRepository.PUNTOS_PRACTICA,
 		"estado": estado,
 		"mejor_puntaje": int(estado_p["mejor_porcentaje"]),
@@ -132,7 +134,7 @@ func _crear_nodo(m: Dictionary) -> Control:
 		"completado":
 			ic.tipo = "check"; ic.color = Color.WHITE
 		"desbloqueado":
-			ic.tipo = "puzzle" if es_practica else "play"; ic.color = Color.WHITE
+			ic.tipo = "puzzle" if (es_practica or m["tipo"] == "puzzle") else "play"; ic.color = Color.WHITE
 		_:
 			ic.tipo = "candado"; ic.color = COLOR_GRIS_ICONO
 	ic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -143,7 +145,7 @@ func _crear_nodo(m: Dictionary) -> Control:
 	if es_practica:
 		lbl.text = "Práctica de ingeniero"
 	else:
-		lbl.text = "%d · %s" % [_numero_en_materia(m), _nombre_corto(m["nombre"])]
+		lbl.text = "%d · %s" % [_numero_en_tema(m), _nombre_corto(m["nombre"])]
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.theme_type_variation = &"NodoTextoActivo" if estado == "desbloqueado" else &"NodoTexto"
 	lbl.position = Vector2(0, TAM_NODO + 6)
@@ -154,8 +156,8 @@ func _crear_nodo(m: Dictionary) -> Control:
 	return cont
 
 
-## Número del módulo dentro de su materia (1, 2, 3…) para las etiquetas del mapa.
-func _numero_en_materia(m: Dictionary) -> int:
+## Número del módulo dentro de su tema (1, 2, 3…) para las etiquetas del mapa.
+func _numero_en_tema(m: Dictionary) -> int:
 	for k in modulos.size():
 		if int(modulos[k]["id"]) == int(m["id"]):
 			return k + 1
@@ -164,8 +166,8 @@ func _numero_en_materia(m: Dictionary) -> int:
 
 ## Nombres cortos para que quepan bajo el nodo (como en el mockup).
 func _nombre_corto(nombre: String) -> String:
-	var cortos := {"Requerimientos de software": "Requerimientos", "Modelado con UML": "Modelado UML",
-		"Ciclo de vida del software": "Ciclo de vida"}
+	var cortos := {"Quiz I · Conceptos": "Quiz I", "Quiz II · Aplicación": "Quiz II",
+		"Puzzle · Manos a la obra": "Puzzle"}
 	return cortos.get(nombre, nombre)
 
 
@@ -214,7 +216,7 @@ func _mostrar_detalle(m: Dictionary) -> void:
 		%LblDetTipo.text = "Práctica"
 		%IconoTile.tipo = "puzzle"
 	else:
-		%LblDetEncabezado.text = "MÓDULO %d · %s" % [_numero_en_materia(m), estado.to_upper()]
+		%LblDetEncabezado.text = "MÓDULO %d · %s" % [_numero_en_tema(m), estado.to_upper()]
 		%LblDetTipo.text = m["tipo"].capitalize()
 		%IconoTile.tipo = "puzzle" if m["tipo"] == "puzzle" else "quiz"
 	%LblDetEncabezado.theme_type_variation = &"EtiquetaVerde" if completado else &"EtiquetaAzul"
@@ -248,15 +250,15 @@ func _mostrar_detalle(m: Dictionary) -> void:
 
 func _mostrar_bloqueado(m: Dictionary) -> void:
 	if int(m["id"]) == ID_PRACTICA:
-		# CU-11: la práctica exige todos los módulos de la materia completados
-		var faltan := modulos.size() - JuegoRepository.modulos_completados_materia(id_materia)
+		# CU-11: la práctica exige todos los módulos del tema completados
+		var faltan := modulos.size() - JuegoRepository.modulos_completados_tema(id_tema)
 		%LblBloqEncabezado.text = "PRÁCTICA · BLOQUEADA"
 		%LblBloqNombre.text = m["nombre"]
 		%LblBloqNumero.text = str(faltan)
-		%LblBloqRequisito.text = "Completa [color=#2F55E6]todos los módulos de %s[/color] (te faltan %d)" % [materia.get("corto", "la materia"), faltan]
+		%LblBloqRequisito.text = "Completa [color=#2F55E6]todos los módulos de %s[/color] (te faltan %d)" % [tema.get("corto", "este tema"), faltan]
 		%PanelBloqueado.show()
 		return
-	var numero := _numero_en_materia(m)
+	var numero := _numero_en_tema(m)
 	var previo: Dictionary = modulos[numero - 2] if numero >= 2 else {}
 	%LblBloqEncabezado.text = "MÓDULO %d · BLOQUEADO" % numero
 	%LblBloqNombre.text = m["nombre"]
@@ -267,8 +269,16 @@ func _mostrar_bloqueado(m: Dictionary) -> void:
 
 func _on_accion() -> void:
 	if int(modulo_sel["id"]) == ID_PRACTICA:
-		# CU-11 paso 2: "Iniciar" abre la práctica de la materia
-		JuegoRepository.practica_materia = id_materia
+		# CU-11 paso 2: "Iniciar" abre la práctica del tema
+		JuegoRepository.practica_tema = id_tema
+		JuegoRepository.puzzle_modulo = 0
+		get_tree().change_scene_to_file(RUTA_PRACTICA)
+		return
+	if modulo_sel["tipo"] == "puzzle":
+		# Módulo tipo puzzle: se juega en la escena de manipulación en modo módulo
+		JuegoRepository.practica_tema = id_tema
+		JuegoRepository.puzzle_modulo = int(modulo_sel["id"])
+		JuegoRepository.modulo_seleccionado = int(modulo_sel["id"])
 		get_tree().change_scene_to_file(RUTA_PRACTICA)
 		return
 	# Avisar al CU-03 qué módulo se eligió y cambiar de pantalla

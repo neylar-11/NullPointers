@@ -1,9 +1,9 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scenes/cu08_materias/materias.gd" id="script"]
+[ext_resource type="Script" path="res://scenes/cu08_temas/temas.gd" id="script"]
 [ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
 
-[node name="Materias" type="Control"]
+[node name="Temas" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -67,7 +67,7 @@ grosor = 2.5
 
 [node name="LblTituloBarra" type="Label" parent="Margen/Columna/Encabezado"]
 layout_mode = 2
-text = "Materias"
+text = "Temas"
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_type_variation = &"Subtitulo"
@@ -106,7 +106,7 @@ autowrap_mode = 3
 
 [node name="LblSub" type="Label" parent="Margen/Columna"]
 layout_mode = 2
-text = "Cada materia tiene su propio mapa de módulos. Completa todos para desbloquear la práctica de ingeniero."
+text = "Introducción a la Ingeniería de Software en 12 temas. Cada tema tiene su mapa: dos quizzes, un puzzle y la práctica de ingeniero."
 theme_type_variation = &"TextoSecundario"
 unique_name_in_owner = true
 autowrap_mode = 3
@@ -124,7 +124,7 @@ unique_name_in_owner = true
 
 [node name="LblAyuda" type="Label" parent="Margen/Columna"]
 layout_mode = 2
-text = "El desbloqueo de módulos es independiente en cada materia"
+text = "El desbloqueo de módulos es independiente en cada tema"
 theme_type_variation = &"TextoTerciario"
 horizontal_alignment = 1
 autowrap_mode = 3

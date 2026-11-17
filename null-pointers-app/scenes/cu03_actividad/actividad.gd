@@ -50,7 +50,8 @@ func _ready() -> void:
 	# --- Cargar módulo y preguntas desde la BD local (RNF-01) ---
 	id_modulo = JuegoRepository.modulo_seleccionado
 	modulo = JuegoRepository.obtener_modulo(id_modulo)
-	reactivos = JuegoRepository.obtener_reactivos(id_modulo)
+	# Sprint 3: cada intento sortea 5 preguntas al azar del banco de 15 del tema
+	reactivos = JuegoRepository.sortear_reactivos(id_modulo)
 	if modulo.is_empty() or reactivos.is_empty():
 		push_error("El módulo %d no existe o no tiene preguntas" % id_modulo)
 		_volver_al_mapa()
@@ -75,8 +76,8 @@ func _ready() -> void:
 	%BtnPistaDescartar.pressed.connect(_on_pista_descartar)
 	%BtnPista.visible = pistas_permitidas
 
-	var materia := JuegoRepository.obtener_materia(int(modulo.get("id_materia", 1)))
-	%LblModulo.text = "%s · %s" % [materia.get("corto", "Módulo %d" % id_modulo), _nombre_corto(modulo["nombre"])]
+	var tema := JuegoRepository.obtener_tema(int(modulo.get("id_tema", 1)))
+	%LblModulo.text = "%s · %s" % [tema.get("corto", "Módulo %d" % id_modulo), _nombre_corto(modulo["nombre"])]
 	%Barra.max_value = reactivos.size()
 
 	# CU-04 paso 5: si venimos de la teoría, continuar en el punto donde se detuvo (paso 4)
@@ -89,8 +90,8 @@ func _ready() -> void:
 
 
 func _nombre_corto(nombre: String) -> String:
-	var cortos := {"Requerimientos de software": "Requerimientos", "Modelado con UML": "Modelado UML",
-		"Ciclo de vida del software": "Ciclo de vida"}
+	var cortos := {"Quiz I · Conceptos": "Quiz I", "Quiz II · Aplicación": "Quiz II",
+		"Puzzle · Manos a la obra": "Puzzle"}
 	return cortos.get(nombre, nombre)
 
 
@@ -326,6 +327,7 @@ func _on_ver_teoria() -> void:
 	JuegoRepository.reto_en_pausa = {
 		"id_modulo": id_modulo,
 		"indice": indice,
+		"ids_reactivos": _ids_reactivos(),     # las mismas 5 preguntas al volver de la teoría
 		"aciertos": aciertos,
 		"puntos_reto": puntos_reto,
 		"opcion_elegida": opcion_elegida,
@@ -343,6 +345,13 @@ func _on_ver_teoria() -> void:
 func _restaurar_desde_pausa(p: Dictionary) -> void:
 	restaurando = true
 	indice = int(p["indice"])
+	if p.has("ids_reactivos"):
+		reactivos = []
+		for id_r in p["ids_reactivos"]:
+			var r := JuegoRepository.obtener_reactivo(int(id_r))
+			if not r.is_empty():
+				reactivos.append(r)
+		%Barra.max_value = reactivos.size()
 	aciertos = int(p["aciertos"])
 	puntos_reto = int(p["puntos_reto"])
 	_mostrar_pregunta()
@@ -370,7 +379,7 @@ func _restaurar_desde_pausa(p: Dictionary) -> void:
 func _terminar_reto() -> void:
 	# Pasos 5-7 del SRS: mostrar resultado, guardar intento, actualizar perfil, desbloquear
 	# CU-10: los puntos del intento ya traen los descuentos; se registran las pistas usadas
-	var res := JuegoRepository.registrar_intento(id_modulo, aciertos, puntos_reto, pistas_intento)
+	var res := JuegoRepository.registrar_intento(id_modulo, aciertos, puntos_reto, pistas_intento, reactivos.size())
 	var completado: bool = res["completado"]
 
 	%LblResModulo.text = "%s · %s" % [%LblModulo.text.get_slice(" · ", 0), modulo["nombre"]]
@@ -395,10 +404,10 @@ func _terminar_reto() -> void:
 			%LblResSiguiente.text = "Siguiente módulo desbloqueado"
 			%LblResSiguienteDet.text = sig["nombre"]
 		elif res.get("practica_desbloqueada", false):
-			# CU-11 paso 1: se desbloqueó el nodo final "Práctica de ingeniero" de la materia
+			# CU-11 paso 1: se desbloqueó el nodo final "Práctica de ingeniero" del tema
 			%IconoEstado2.tipo = "puzzle"; %IconoEstado2.color = VERDE
 			%LblResSiguiente.text = "¡Práctica de ingeniero desbloqueada!"
-			%LblResSiguienteDet.text = "Completaste todos los módulos de la materia. Búscala al final del mapa."
+			%LblResSiguienteDet.text = "Completaste todos los módulos del tema. Búscala al final del mapa."
 		_colorear_estado(true)
 		%BtnReintentar.hide()
 		%BtnVolverMapa.theme_type_variation = &""
@@ -457,9 +466,18 @@ func _on_reintentar() -> void:
 	aciertos = 0
 	puntos_reto = 0
 	pistas_intento = 0
+	reactivos = JuegoRepository.sortear_reactivos(id_modulo)    # otras 5 preguntas al azar
+	%Barra.max_value = reactivos.size()
 	%PanelResultado.hide()
 	%PanelPregunta.show()
 	_mostrar_pregunta()
+
+
+func _ids_reactivos() -> Array:
+	var ids: Array = []
+	for r in reactivos:
+		ids.append(int(r["id"]))
+	return ids
 
 
 func _volver_al_mapa() -> void:

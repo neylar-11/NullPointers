@@ -1,37 +1,51 @@
 # res://autoload/JuegoRepository.gd
-# Base de datos local (Autoload / Singleton) de NullPointers-AppGamificada.
-# Persiste en user:// (memoria interna de la app) como JSON → 100 % offline (RNF-01, RNF-02).
+# Repositorio de datos local (Autoload). Implementa la "base de datos local"
+# del SRS con un archivo JSON en user:// (RNF-01: sin conexión a internet).
 #
-# Tablas (SDS): perfil_jugador, materias, modulos, reactivos, intentos_modulo, conceptos,
-#               insignias, errores (CU-09), practicas e intentos_practica (CU-11)
+# Tablas (SDS): perfil_jugador, temas, modulos, reactivos, intentos_modulo, conceptos,
+#               insignias, errores (CU-09), puzzles, practicas e intentos_practica (CU-11)
 # Casos de uso cubiertos: CU-01 (perfil), CU-02 (mapa), CU-03 (actividad),
 #                         CU-04 (teoría), CU-05 (insignias), CU-06 (progreso),
-#                         CU-08 (materias), CU-09 (repaso de errores),
+#                         CU-08 (temas), CU-09 (repaso de errores),
 #                         CU-10 (pistas), CU-11 (práctica de ingeniero)
 #
+# Estructura (Sprint 3, esquema 4): la materia Introducción a la Ingeniería de
+# Software se divide en 12 TEMAS. Cada tema tiene su propio mapa con tres módulos
+# (Quiz I, Quiz II y Puzzle) y un nodo final "Práctica de ingeniero".
+#   - Cada quiz sortea 5 preguntas al azar del banco de 15 del tema.
+#   - El módulo Puzzle usa las mecánicas de manipulación (clasificar, construir,
+#     ordenar, seleccionar) con los ejercicios del tema.
+#   - La práctica toma 4 ejercicios al azar del tema y de lógica de programación.
+#
 # Uso desde cualquier escena:
-#   JuegoRepository.crear_perfil("estudiante_7421")
-#   JuegoRepository.obtener_materias()               # CU-08
-#   JuegoRepository.obtener_modulos(id_materia)      # CU-02 / CU-08
-#   JuegoRepository.registrar_intento(3, 4)   # módulo 3, 4 aciertos de 5
-#   JuegoRepository.obtener_concepto(id_reactivo)   # CU-04
-#   JuegoRepository.obtener_insignias()             # CU-05
-#   JuegoRepository.obtener_progreso()              # CU-06
-#   JuegoRepository.obtener_errores_pendientes()    # CU-09
-#   JuegoRepository.costo_pista("recordar")         # CU-10
-#   JuegoRepository.obtener_practica(id_materia)    # CU-11
+#   JuegoRepository.obtener_temas()                  # CU-08
+#   JuegoRepository.obtener_modulos_tema(id_tema)    # CU-02 / CU-08
+#   JuegoRepository.sortear_reactivos(id_modulo)     # CU-03: 5 preguntas al azar
+#   JuegoRepository.registrar_intento(101, 4)        # módulo 101, 4 aciertos de 5
+#   JuegoRepository.obtener_concepto(id_reactivo)    # CU-04
+#   JuegoRepository.obtener_insignias()              # CU-05
+#   JuegoRepository.obtener_progreso()               # CU-06
+#   JuegoRepository.obtener_errores_pendientes()     # CU-09
+#   JuegoRepository.costo_pista("recordar")          # CU-10
+#   JuegoRepository.sortear_practica(id_tema)        # CU-11
 
 extends Node
 
 const RUTA_BD := "user://nullpointers_bd.json"
+const ESQUEMA := 4                   # versión del esquema de la BD (Sprint 3 · temas)
 const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mockups / CU-03)
+const PREGUNTAS_POR_QUIZ := 5        # preguntas que sortea cada intento de quiz
+const EJERCICIOS_PRACTICA := 4       # ejercicios que sortea cada intento de práctica (CU-11)
+const PUNTOS_PRACTICA := 100
 
 var bd: Dictionary = {}
-var modulo_seleccionado: int = 1      # lo pone el mapa (CU-02) antes de abrir la actividad
-## CU-08: materia cuyo mapa se muestra (la pone la pantalla de materias antes de abrir el mapa).
-var materia_seleccionada: int = 1
-## CU-11: materia cuya práctica se va a resolver (la pone el mapa antes de abrir la práctica).
-var practica_materia: int = 1
+var modulo_seleccionado: int = 101    # lo pone el mapa (CU-02) antes de abrir la actividad
+## CU-08: tema cuyo mapa se muestra (la pone la pantalla de temas antes de abrir el mapa).
+var tema_seleccionado: int = 1
+## CU-11: tema cuya práctica se va a resolver (la pone el mapa antes de abrir la práctica).
+var practica_tema: int = 1
+## Módulo tipo puzzle que se va a jugar en la escena de práctica (0 = es la práctica del tema).
+var puzzle_modulo: int = 0
 ## CU-09: estado de la sesión de repaso mientras se consulta la teoría (CU-04). Vacío = ninguna.
 var repaso_en_pausa: Dictionary = {}
 ## CU-04: escena a la que debe regresar la teoría ("" = al reto en pausa o al mapa).
@@ -57,22 +71,13 @@ func cargar_bd() -> void:
 		var datos = JSON.parse_string(archivo.get_as_text())
 		archivo.close()
 		if datos is Dictionary and datos.has("modulos"):
-			bd = datos
-			# Migración de BD creadas con versiones anteriores
-			var p: Dictionary = bd["perfil_jugador"]
-			if not p.has("avatar_id"): p["avatar_id"] = "avatar_01"
-			if not p.has("contrasena"): p["contrasena"] = ""
-			if p["alias"] == "": p["alias"] = "estudiante_%04d" % (randi() % 10000)
-			# Sprint 2: tablas nuevas (CU-04 / CU-05) para BD creadas en Sprint 1
-			var inicial := _bd_inicial()
-			# Los reactivos no guardan progreso: se refrescan para traer id_concepto
-			if not bd["reactivos"].is_empty() and not bd["reactivos"][0].has("id_concepto"):
-				bd["reactivos"] = inicial["reactivos"]
-			if not bd.has("conceptos"): bd["conceptos"] = inicial["conceptos"]
-			if not bd.has("insignias"): bd["insignias"] = inicial["insignias"]
-			if not bd.has("teoria_consultas"): bd["teoria_consultas"] = 0
-			_migrar_sprint3(inicial)
+			if int(datos.get("esquema", 1)) < ESQUEMA:
+				bd = _migrar_a_temas(datos)      # BD de Sprint 1, 2 o 3 (materias)
+			else:
+				bd = datos
+				_refrescar_contenido()
 			evaluar_insignias()
+			guardar_bd()
 			return
 	# Primera vez (o archivo corrupto): crear BD inicial
 	bd = _bd_inicial()
@@ -89,32 +94,24 @@ func reiniciar_bd() -> void:
 	guardar_bd()
 
 
-## Sprint 3: lleva una BD de Sprint 1/2 al esquema con materias, errores,
-## pistas y prácticas SIN perder el progreso ya guardado.
-func _migrar_sprint3(inicial: Dictionary) -> void:
-	# CU-08: catálogo de materias y módulos nuevos (los 8 originales son de la materia 1)
-	if not bd.has("materias"):
-		bd["materias"] = inicial["materias"]
-		bd["ultima_materia"] = 1
-	for m in bd["modulos"]:
-		if not m.has("id_materia"):
-			m["id_materia"] = 1
+## El contenido (preguntas, conceptos, puzzles, textos de insignias) no guarda
+## progreso: se refresca desde _bd_inicial() para que las correcciones del banco
+## lleguen a quien ya tiene la app instalada. El progreso (módulos, intentos,
+## errores, prácticas) se conserva.
+func _refrescar_contenido() -> void:
+	var inicial := _bd_inicial()
+	bd["temas"] = inicial["temas"]
+	bd["reactivos"] = inicial["reactivos"]
+	bd["conceptos"] = inicial["conceptos"]
+	bd["puzzles"] = inicial["puzzles"]
+	# Módulos nuevos (por si el banco crece) y textos actualizados
 	for m_ini in inicial["modulos"]:
-		if obtener_modulo(int(m_ini["id"])).is_empty():
+		var m := obtener_modulo(int(m_ini["id"]))
+		if m.is_empty():
 			bd["modulos"].append(m_ini)
-	# Reactivos y conceptos no guardan progreso: se completan con los nuevos
-	for r in inicial["reactivos"]:
-		if obtener_reactivo(int(r["id"])).is_empty():
-			bd["reactivos"].append(r)
-	for c in inicial["conceptos"]:
-		var existe := false
-		for c2 in bd["conceptos"]:
-			if c2["id"] == c["id"]:
-				existe = true
-				break
-		if not existe:
-			bd["conceptos"].append(c)
-	# CU-05: insignias nuevas y textos actualizados (se conserva si ya se obtuvo)
+		else:
+			for k in ["nombre", "tipo", "descripcion", "num_preguntas", "puntos_maximos", "id_tema"]:
+				m[k] = m_ini[k]
 	for ins_ini in inicial["insignias"]:
 		var encontrada: Dictionary = {}
 		for ins in bd["insignias"]:
@@ -124,104 +121,184 @@ func _migrar_sprint3(inicial: Dictionary) -> void:
 		if encontrada.is_empty():
 			bd["insignias"].append(ins_ini)
 		else:
-			encontrada["titulo"] = ins_ini["titulo"]
-			encontrada["descripcion"] = ins_ini["descripcion"]
-			encontrada["condicion"] = ins_ini["condicion"]
-	# CU-09 / CU-10 / CU-11
-	if not bd.has("errores"): bd["errores"] = []
-	for i in bd["intentos_modulo"]:
-		if not i.has("pistas"): i["pistas"] = 0
-	if not bd.has("practicas"): bd["practicas"] = inicial["practicas"]
-	if not bd.has("intentos_practica"): bd["intentos_practica"] = []
-	guardar_bd()
+			for k in ["titulo", "descripcion", "condicion", "icono", "color"]:
+				encontrada[k] = ins_ini[k]
+	for p_ini in inicial["practicas"]:
+		var p := obtener_practica(int(p_ini["id_tema"]))
+		if p.is_empty():
+			bd["practicas"].append(p_ini)
+		else:
+			p["titulo"] = p_ini["titulo"]
+			p["escenario"] = p_ini["escenario"]
 
 
-# =====================================================================
-#  CU-08: ELEGIR MATERIA
-# =====================================================================
-func obtener_materias() -> Array:
-	return bd["materias"]
+## Lleva una BD de Sprint 1/2 (8 módulos) o de Sprint 3 (materias) al esquema
+## por temas SIN perder el progreso: los módulos 1-8 pasan a ser el Quiz I de los
+## temas 1-8, los intentos se re-asocian, y perfil, puntos, insignias y errores
+## se conservan. Los módulos de las materias 2 y 3 (ids 9-14) desaparecen, pero
+## los puntos que dieron se quedan en el perfil.
+func _migrar_a_temas(vieja: Dictionary) -> Dictionary:
+	var nueva := _bd_inicial()
+	# Perfil
+	var p: Dictionary = vieja.get("perfil_jugador", {})
+	for k in ["alias", "avatar_id", "contrasena", "puntos_totales", "fecha_creacion"]:
+		if p.has(k):
+			nueva["perfil_jugador"][k] = p[k]
+	if str(nueva["perfil_jugador"]["alias"]) == "":
+		nueva["perfil_jugador"]["alias"] = "estudiante_%04d" % (randi() % 10000)
+	nueva["teoria_consultas"] = int(vieja.get("teoria_consultas", 0))
+	# Progreso de los módulos 1-8 → Quiz I del tema correspondiente
+	for m_vieja in vieja.get("modulos", []):
+		var id_viejo := int(m_vieja["id"])
+		if id_viejo < 1 or id_viejo > 8:
+			continue
+		var quiz1 := obtener_modulo_en(nueva, id_viejo * 100 + 1)
+		if quiz1.is_empty():
+			continue
+		quiz1["estado"] = m_vieja.get("estado", "bloqueado")
+		quiz1["mejor_puntaje"] = int(m_vieja.get("mejor_puntaje", -1))
+		quiz1["puntos_obtenidos"] = int(m_vieja.get("puntos_obtenidos", 0))
+		if quiz1["estado"] == "completado":
+			var quiz2 := obtener_modulo_en(nueva, id_viejo * 100 + 2)
+			if not quiz2.is_empty() and quiz2["estado"] == "bloqueado":
+				quiz2["estado"] = "desbloqueado"
+	# Intentos: solo los de los módulos 1-8, re-asociados
+	for i in vieja.get("intentos_modulo", []):
+		var id_viejo := int(i["id_modulo"])
+		if id_viejo >= 1 and id_viejo <= 8:
+			var copia: Dictionary = i.duplicate()
+			copia["id_modulo"] = id_viejo * 100 + 1
+			if not copia.has("pistas"): copia["pistas"] = 0
+			copia["id"] = nueva["intentos_modulo"].size() + 1
+			nueva["intentos_modulo"].append(copia)
+	# Insignias obtenidas
+	for ins_vieja in vieja.get("insignias", []):
+		if ins_vieja.get("obtenida", false):
+			for ins in nueva["insignias"]:
+				if ins["id"] == ins_vieja["id"]:
+					ins["obtenida"] = true
+					ins["fecha"] = ins_vieja.get("fecha", "")
+	# Errores (CU-09): solo de preguntas que siguen existiendo
+	for e in vieja.get("errores", []):
+		var r := _buscar_reactivo_en(nueva, int(e["id_reactivo"]))
+		if r.is_empty():
+			continue
+		var copia: Dictionary = e.duplicate()
+		copia["id_tema"] = int(r["id_tema"])
+		copia.erase("id_modulo")
+		nueva["errores"].append(copia)
+	return nueva
 
-func obtener_materia(id_materia: int) -> Dictionary:
-	for mat in bd["materias"]:
-		if int(mat["id"]) == id_materia:
-			return mat
+func obtener_modulo_en(base: Dictionary, id_modulo: int) -> Dictionary:
+	for m in base["modulos"]:
+		if int(m["id"]) == id_modulo:
+			return m
 	return {}
 
-## Módulos de una materia (en orden). Con id_materia = -1 regresa todos.
-func obtener_modulos_materia(id_materia: int) -> Array:
+func _buscar_reactivo_en(base: Dictionary, id_reactivo: int) -> Dictionary:
+	for r in base["reactivos"]:
+		if int(r["id"]) == id_reactivo:
+			return r
+	return {}
+
+
+# =====================================================================
+#  CU-08: ELEGIR TEMA
+# =====================================================================
+func obtener_temas() -> Array:
+	return bd["temas"]
+
+func obtener_tema(id_tema: int) -> Dictionary:
+	for t in bd["temas"]:
+		if int(t["id"]) == id_tema:
+			return t
+	return {}
+
+## Módulos de un tema (en orden). Con id_tema = -1 regresa todos.
+func obtener_modulos_tema(id_tema: int) -> Array:
 	var lista: Array = []
 	for m in bd["modulos"]:
-		if id_materia < 0 or int(m.get("id_materia", 1)) == id_materia:
+		if id_tema < 0 or int(m.get("id_tema", 1)) == id_tema:
 			lista.append(m)
 	return lista
 
-func modulos_completados_materia(id_materia: int) -> int:
+func modulos_completados_tema(id_tema: int) -> int:
 	var total := 0
-	for m in obtener_modulos_materia(id_materia):
+	for m in obtener_modulos_tema(id_tema):
 		if m["estado"] == "completado":
 			total += 1
 	return total
 
-## Resumen de cada materia para el catálogo (paso 2 del CU-08):
-## nombre, módulos completados/total, porcentaje de avance y si está dominada.
-func obtener_catalogo_materias() -> Array:
+## Resumen de cada tema para el catálogo (paso 2 del CU-08):
+## nombre, módulos completados/total, porcentaje de avance y si está dominado.
+func obtener_catalogo_temas() -> Array:
 	var catalogo: Array = []
-	for mat in bd["materias"]:
-		var id_mat := int(mat["id"])
-		var mods := obtener_modulos_materia(id_mat)
-		var completados := modulos_completados_materia(id_mat)
+	for t in bd["temas"]:
+		var id_tema := int(t["id"])
+		var mods := obtener_modulos_tema(id_tema)
+		var completados := modulos_completados_tema(id_tema)
 		var porcentaje := 0
 		if not mods.is_empty():
 			porcentaje = int(round(float(completados) / float(mods.size()) * 100.0))
-		var fila: Dictionary = mat.duplicate()
+		var fila: Dictionary = t.duplicate()
 		fila["modulos_totales"] = mods.size()
 		fila["modulos_completados"] = completados
 		fila["porcentaje"] = porcentaje
-		fila["sin_iniciar"] = completados == 0 and not _materia_tiene_intentos(id_mat)
-		fila["dominada"] = materia_dominada(id_mat)
-		fila["es_ultima"] = id_mat == int(bd.get("ultima_materia", 1))
+		fila["sin_iniciar"] = completados == 0 and not _tema_tiene_intentos(id_tema)
+		fila["dominado"] = tema_dominado(id_tema)
+		fila["es_ultimo"] = id_tema == int(bd.get("ultimo_tema", 1))
 		catalogo.append(fila)
 	return catalogo
 
-func _materia_tiene_intentos(id_materia: int) -> bool:
+func _tema_tiene_intentos(id_tema: int) -> bool:
 	for i in bd["intentos_modulo"]:
 		var m := obtener_modulo(int(i["id_modulo"]))
-		if not m.is_empty() and int(m.get("id_materia", 1)) == id_materia:
+		if not m.is_empty() and int(m.get("id_tema", 1)) == id_tema:
 			return true
 	return false
 
-## La materia visitada por última vez ("Continuar en…", flujo alternativo 2 del CU-08).
-func obtener_ultima_materia() -> Dictionary:
-	return obtener_materia(int(bd.get("ultima_materia", 1)))
+## El tema visitado por última vez ("Continuar en…", flujo alternativo 2 del CU-08).
+func obtener_ultimo_tema() -> Dictionary:
+	return obtener_tema(int(bd.get("ultimo_tema", 1)))
 
-## Paso 4 del CU-08: el estudiante eligió una materia; se recuerda para la próxima vez.
-func seleccionar_materia(id_materia: int) -> void:
-	materia_seleccionada = id_materia
-	bd["ultima_materia"] = id_materia
+## Paso 4 del CU-08: el estudiante eligió un tema; se recuerda para la próxima vez.
+func seleccionar_tema(id_tema: int) -> void:
+	tema_seleccionado = id_tema
+	bd["ultimo_tema"] = id_tema
 	guardar_bd()
 
-## El siguiente módulo jugable (desbloqueado) de una materia, para el menú.
-func siguiente_modulo_materia(id_materia: int) -> Dictionary:
-	for m in obtener_modulos_materia(id_materia):
+## El siguiente módulo jugable (desbloqueado) de un tema, para el menú.
+func siguiente_modulo_tema(id_tema: int) -> Dictionary:
+	for m in obtener_modulos_tema(id_tema):
 		if m["estado"] == "desbloqueado":
 			return m
 	return {}
 
-## Siguiente módulo de la misma materia (o {} si es el último).
+## Siguiente módulo del mismo tema (o {} si es el último).
 func siguiente_modulo_de(id_modulo: int) -> Dictionary:
 	var actual := obtener_modulo(id_modulo)
 	if actual.is_empty():
 		return {}
-	var mods := obtener_modulos_materia(int(actual.get("id_materia", 1)))
+	var mods := obtener_modulos_tema(int(actual.get("id_tema", 1)))
 	for k in mods.size():
 		if int(mods[k]["id"]) == id_modulo:
 			return mods[k + 1] if k + 1 < mods.size() else {}
 	return {}
 
+## Número del módulo dentro de su tema (1, 2, 3…).
+func numero_en_tema(id_modulo: int) -> int:
+	var actual := obtener_modulo(id_modulo)
+	if actual.is_empty():
+		return 0
+	var mods := obtener_modulos_tema(int(actual.get("id_tema", 1)))
+	for k in mods.size():
+		if int(mods[k]["id"]) == id_modulo:
+			return k + 1
+	return 0
+
 
 # =====================================================================
-#  CU-01: EDITAR PERFIL (SRS 1.1: el perfil se crea automáticamente)
+#  CU-01: PERFIL DE JUGADOR
 # =====================================================================
 const ALIAS_MIN := 3
 const ALIAS_MAX := 20
@@ -237,12 +314,12 @@ func obtener_perfil() -> Dictionary:
 
 ## Valida el alias según el SRS: no vacío, de 3 a 20 caracteres.
 func alias_valido(alias: String) -> bool:
-	var n := alias.strip_edges().length()
-	return n >= ALIAS_MIN and n <= ALIAS_MAX
+	var a := alias.strip_edges()
+	return a.length() >= ALIAS_MIN and a.length() <= ALIAS_MAX
 
 ## Valida la contraseña: solo dígitos, de 4 a 8.
 func contrasena_valida(c: String) -> bool:
-	return c.length() >= CONTRASENA_MIN and c.length() <= CONTRASENA_MAX and c.is_valid_int() and not c.begins_with("-")
+	return c.is_valid_int() and c.length() >= CONTRASENA_MIN and c.length() <= CONTRASENA_MAX and not c.begins_with("-")
 
 ## Compatibilidad: crea/renombra el perfil (el perfil ya existe por defecto).
 func crear_perfil(alias: String) -> bool:
@@ -250,16 +327,16 @@ func crear_perfil(alias: String) -> bool:
 
 ## Cambia el alias. Regresa false si no cumple 3-20 caracteres.
 func actualizar_nombre(nuevo_alias: String) -> bool:
-	nuevo_alias = nuevo_alias.strip_edges()
-	if not alias_valido(nuevo_alias):
+	var a := nuevo_alias.strip_edges()
+	if not alias_valido(a):
 		return false
-	bd["perfil_jugador"]["alias"] = nuevo_alias
+	bd["perfil_jugador"]["alias"] = a
 	guardar_bd()
 	return true
 
 ## Cambia el avatar (debe ser uno del catálogo Avatar.CATALOGO).
 func actualizar_avatar(avatar_id: String) -> bool:
-	if not avatar_id in AVATARES:
+	if not AVATARES.has(avatar_id):
 		return false
 	bd["perfil_jugador"]["avatar_id"] = avatar_id
 	guardar_bd()
@@ -281,7 +358,7 @@ func obtener_puntos_totales() -> int:
 
 
 # =====================================================================
-#  CU-02: SELECCIONAR MÓDULO DE APRENDIZAJE (mapa 2D)
+#  CU-02: MAPA DE MÓDULOS
 # =====================================================================
 func obtener_modulos() -> Array:
 	return bd["modulos"]
@@ -299,7 +376,7 @@ func modulos_completados() -> int:
 			total += 1
 	return total
 
-## El siguiente módulo que el alumno puede jugar (para "Siguiente: Módulo 3" del menú).
+## El siguiente módulo que el alumno puede jugar (para "Siguiente: …" del menú).
 func siguiente_modulo() -> Dictionary:
 	for m in bd["modulos"]:
 		if m["estado"] == "desbloqueado":
@@ -308,14 +385,30 @@ func siguiente_modulo() -> Dictionary:
 
 
 # =====================================================================
-#  CU-03: RESOLVER ACTIVIDAD DE APRENDIZAJE
+#  CU-03: RESOLVER ACTIVIDAD
 # =====================================================================
+## Banco completo de preguntas del tema al que pertenece el módulo.
 func obtener_reactivos(id_modulo: int) -> Array:
+	var m := obtener_modulo(id_modulo)
+	if m.is_empty():
+		return []
+	return obtener_reactivos_tema(int(m.get("id_tema", 1)))
+
+func obtener_reactivos_tema(id_tema: int) -> Array:
 	var lista: Array = []
 	for r in bd["reactivos"]:
-		if int(r["id_modulo"]) == id_modulo:
+		if int(r["id_tema"]) == id_tema:
 			lista.append(r)
 	return lista
+
+## Sortea las preguntas de un intento: num_preguntas al azar del banco del tema,
+## sin repetir (regla del Sprint 3: cada intento trae preguntas distintas).
+func sortear_reactivos(id_modulo: int) -> Array:
+	var m := obtener_modulo(id_modulo)
+	var banco := obtener_reactivos(id_modulo)
+	banco.shuffle()
+	var n: int = int(m.get("num_preguntas", PREGUNTAS_POR_QUIZ)) if not m.is_empty() else PREGUNTAS_POR_QUIZ
+	return banco.slice(0, mini(n, banco.size()))
 
 func obtener_intentos(id_modulo: int) -> Array:
 	var lista: Array = []
@@ -326,18 +419,19 @@ func obtener_intentos(id_modulo: int) -> Array:
 
 ## Registra un intento terminado. Regresa un Dictionary con todo lo que
 ## necesita la pantalla de resultados de los mockups.
+##   aciertos     = preguntas correctas (quiz) o piezas correctas (puzzle)
 ##   puntos_reto  = puntos acumulados en el intento ya con los descuentos de pistas (CU-10);
 ##                  -1 = calcularlos a partir de los aciertos (sin pistas).
 ##   pistas       = número de pistas usadas en el intento (CU-10).
-func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pistas: int = 0) -> Dictionary:
+##   total        = total de preguntas/piezas del intento; -1 = num_preguntas del módulo.
+func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pistas: int = 0, total: int = -1) -> Dictionary:
 	var modulo := obtener_modulo(id_modulo)
 	if modulo.is_empty():
 		push_error("Módulo %d no existe" % id_modulo)
 		return {}
 
-	var total_preguntas := obtener_reactivos(id_modulo).size()
-	if total_preguntas == 0:
-		total_preguntas = int(modulo["num_preguntas"])
+	# El porcentaje se calcula sobre las preguntas del intento (5), no sobre el banco (15)
+	var total_preguntas := total if total > 0 else int(modulo["num_preguntas"])
 
 	var porcentaje := int(round(float(aciertos) / float(total_preguntas) * 100.0))
 	var puntos_maximos := int(modulo["puntos_maximos"])
@@ -370,7 +464,7 @@ func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pis
 		modulo["puntos_obtenidos"] = puntos
 		bd["perfil_jugador"]["puntos_totales"] = obtener_puntos_totales() + puntos_sumados
 
-	# 3) Marcar completado y desbloquear el siguiente DE LA MISMA MATERIA (regla del CU-08)
+	# 3) Marcar completado y desbloquear el siguiente DEL MISMO TEMA (regla del CU-08)
 	var siguiente_desbloqueado: Dictionary = {}
 	if completado:
 		modulo["estado"] = "completado"
@@ -379,22 +473,24 @@ func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pis
 			siguiente["estado"] = "desbloqueado"
 			siguiente_desbloqueado = siguiente
 
-	# 4) CU-11 paso 1: la práctica se desbloquea al completar todos los módulos de la materia
-	var id_materia := int(modulo.get("id_materia", 1))
+	# 4) CU-11 paso 1: la práctica se desbloquea al completar todos los módulos del tema
+	var id_tema := int(modulo.get("id_tema", 1))
 	var practica_desbloqueada := completado and siguiente_desbloqueado.is_empty() \
-		and practica_disponible(id_materia) and int(obtener_practica_estado(id_materia)["intentos"]) == 0
+		and practica_disponible(id_tema) and int(obtener_practica_estado(id_tema)["intentos"]) == 0
 
 	# 5) Insignias que se desbloquean con este intento (CU-05)
 	var insignias_nuevas := evaluar_insignias()
 	guardar_bd()
 
 	return {
+		"aciertos": aciertos,
+		"total": total_preguntas,
 		"porcentaje": porcentaje,
 		"puntos": puntos,
 		"puntos_maximos": puntos_maximos,
-		"intentos": obtener_intentos(id_modulo).size(),
 		"completado": completado,
 		"mejor_previo": mejor_previo,
+		"es_mejor": porcentaje > mejor_previo,
 		"puntos_sumados": puntos_sumados,
 		"puntos_totales": obtener_puntos_totales(),
 		"siguiente_desbloqueado": siguiente_desbloqueado,
@@ -422,7 +518,7 @@ func registrar_error(id_reactivo: int) -> void:
 			return
 	bd["errores"].append({
 		"id_reactivo": id_reactivo,
-		"id_modulo": int(r["id_modulo"]),
+		"id_tema": int(r["id_tema"]),
 		"fecha_fallo": Time.get_datetime_string_from_system(),
 		"corregida": false,
 		"fecha_repaso": "",
@@ -430,42 +526,38 @@ func registrar_error(id_reactivo: int) -> void:
 	guardar_bd()
 
 ## Preguntas pendientes de repaso (falladas y aún no acertadas en repaso).
-## Con id_materia >= 0 solo las de esa materia.
-func obtener_errores_pendientes(id_materia: int = -1) -> Array:
+## Con id_tema >= 0 solo las de ese tema.
+func obtener_errores_pendientes(id_tema: int = -1) -> Array:
 	var lista: Array = []
 	for e in bd["errores"]:
 		if e["corregida"]:
 			continue
-		var m := obtener_modulo(int(e["id_modulo"]))
-		if m.is_empty():
+		if obtener_reactivo(int(e["id_reactivo"])).is_empty():
 			continue
-		if id_materia >= 0 and int(m.get("id_materia", 1)) != id_materia:
+		if id_tema >= 0 and int(e.get("id_tema", -1)) != id_tema:
 			continue
 		lista.append(e)
 	return lista
 
-## Paso 2 del CU-09: errores agrupados por materia y módulo, con conteos.
+## Paso 2 del CU-09: errores agrupados por tema, con conteos y los conceptos implicados.
 func obtener_resumen_errores() -> Array:
 	var resumen: Array = []
-	for mat in bd["materias"]:
-		var id_mat := int(mat["id"])
-		var pendientes := obtener_errores_pendientes(id_mat)
+	for t in bd["temas"]:
+		var id_tema := int(t["id"])
+		var pendientes := obtener_errores_pendientes(id_tema)
 		if pendientes.is_empty():
 			continue
-		var por_modulo: Dictionary = {}
+		var conceptos: Array = []
 		for e in pendientes:
-			var id_mod := int(e["id_modulo"])
-			por_modulo[id_mod] = int(por_modulo.get(id_mod, 0)) + 1
-		var modulos_fila: Array = []
-		for id_mod in por_modulo.keys():
-			var m := obtener_modulo(int(id_mod))
-			modulos_fila.append({"id": int(id_mod), "nombre": m.get("nombre", ""), "errores": por_modulo[id_mod]})
+			var c := obtener_concepto(int(e["id_reactivo"]))
+			if not c.is_empty() and not conceptos.has(c["titulo"]):
+				conceptos.append(c["titulo"])
 		resumen.append({
-			"id_materia": id_mat,
-			"materia": mat["nombre"],
-			"color": mat["color"],
+			"id_tema": id_tema,
+			"tema": t["nombre"],
+			"color": t["color"],
 			"total": pendientes.size(),
-			"modulos": modulos_fila,
+			"conceptos": conceptos,
 		})
 	return resumen
 
@@ -539,10 +631,7 @@ func obtener_concepto(id_reactivo: int) -> Dictionary:
 	var r := obtener_reactivo(id_reactivo)
 	if r.is_empty() or r.get("id_concepto", "") == "":
 		return {}
-	for c in bd["conceptos"]:
-		if c["id"] == r["id_concepto"]:
-			return c
-	return {}
+	return obtener_concepto_por_id(str(r["id_concepto"]))
 
 ## Concepto por su id (CU-11: "Ver teoría" dentro de la práctica).
 func obtener_concepto_por_id(id_concepto: String) -> Dictionary:
@@ -583,40 +672,37 @@ func evaluar_insignias() -> Array:
 
 	var hay_perfecto := false        # algún intento con 100 %
 	var hay_puzzle_perfecto := false
-	var hay_requerimientos := false
+	var hay_sin_pistas := false      # CU-10: algún módulo completado sin usar pistas
 	for i in intentos:
 		if int(i["porcentaje"]) >= 100:
 			hay_perfecto = true
 			var m := obtener_modulo(int(i["id_modulo"]))
 			if not m.is_empty() and m["tipo"] == "puzzle":
 				hay_puzzle_perfecto = true
-	var m3 := obtener_modulo(3)
-	hay_requerimientos = not m3.is_empty() and m3["estado"] == "completado"
+		if bool(i["completado"]) and int(i.get("pistas", 0)) == 0:
+			hay_sin_pistas = true
+	# "Analista": los tres módulos del tema 3 (Requerimientos) completados
+	var hay_requerimientos := modulos_completados_tema(3) >= obtener_modulos_tema(3).size() \
+		and not obtener_modulos_tema(3).is_empty()
 
 	var todos_perfectos := total_modulos > 0
 	for m in bd["modulos"]:
 		if int(m["mejor_puntaje"]) < 100:
 			todos_perfectos = false
 
-	var racha := 0      # módulos consecutivos completados desde el 1 (materia 1)
-	for m in obtener_modulos_materia(1):
-		if m["estado"] == "completado":
-			racha += 1
-		else:
+	# "Racha": un tema con sus tres módulos completados
+	var hay_tema_completo := false
+	for t in bd["temas"]:
+		var mods := obtener_modulos_tema(int(t["id"]))
+		if not mods.is_empty() and modulos_completados_tema(int(t["id"])) >= mods.size():
+			hay_tema_completo = true
 			break
 
-	# Sprint 3 ---------------------------------------------------------
-	# CU-10: algún módulo completado sin usar pistas
-	var hay_sin_pistas := false
-	for i in intentos:
-		if bool(i["completado"]) and int(i.get("pistas", 0)) == 0:
-			hay_sin_pistas = true
-			break
 	# CU-09: hubo errores y la lista de pendientes quedó vacía
 	var errores: Array = bd.get("errores", [])
 	var lista_vaciada := not errores.is_empty() and obtener_errores_pendientes().is_empty()
-	# CU-11: al menos una materia dominada
-	var hay_dominada := materias_dominadas() >= 1
+	# CU-11: al menos un tema dominado
+	var hay_dominado := temas_dominados() >= 1
 
 	for ins in bd["insignias"]:
 		if ins["obtenida"]:
@@ -627,36 +713,67 @@ func evaluar_insignias() -> Array:
 			"punteria":        cumple = hay_perfecto
 			"armador":         cumple = hay_puzzle_perfecto
 			"estudioso":       cumple = int(bd.get("teoria_consultas", 0)) >= 5
-			"racha":           cumple = racha >= 3
+			"racha":           cumple = hay_tema_completo
 			"constante":       cumple = intentos.size() >= 10
 			"analista":        cumple = hay_requerimientos
 			"ingeniero":       cumple = completados >= total_modulos
 			"perfeccionista":  cumple = todos_perfectos
 			"repasador":       cumple = lista_vaciada            # CU-09
 			"sin_pistas":      cumple = hay_sin_pistas           # CU-10
-			"dominio":         cumple = hay_dominada             # CU-11
+			"dominio":         cumple = hay_dominado             # CU-11
 		if cumple:
 			ins["obtenida"] = true
-			ins["fecha_obtencion"] = Time.get_datetime_string_from_system()
+			ins["fecha"] = Time.get_datetime_string_from_system()
 			nuevas.append(ins)
 	return nuevas
 
 
 # =====================================================================
-#  CU-11: RESOLVER PRÁCTICA DE INGENIERO
+#  CU-11: RESOLVER PRÁCTICA DE INGENIERO (y módulos tipo puzzle)
 # =====================================================================
-const PUNTOS_PRACTICA := 100
+## Ejercicios de manipulación de un tema (banco del módulo Puzzle y de la práctica).
+func obtener_puzzles_tema(id_tema: int) -> Array:
+	var lista: Array = []
+	for e in bd["puzzles"]:
+		if int(e["id_tema"]) == id_tema:
+			lista.append(e)
+	return lista
 
-## Definición (escenario + ejercicios) de la práctica de una materia; {} si no tiene.
-func obtener_practica(id_materia: int) -> Dictionary:
+## Ejercicios que juega un módulo tipo puzzle: los de su tema, barajados.
+func obtener_ejercicios_modulo(id_modulo: int) -> Array:
+	var m := obtener_modulo(id_modulo)
+	if m.is_empty():
+		return []
+	var lista := obtener_puzzles_tema(int(m.get("id_tema", 1)))
+	lista.shuffle()
+	return lista
+
+## Definición (escenario) de la práctica de un tema; {} si no tiene.
+func obtener_practica(id_tema: int) -> Dictionary:
 	for p in bd["practicas"]:
-		if int(p["id_materia"]) == id_materia:
+		if int(p["id_tema"]) == id_tema:
 			return p
 	return {}
 
-## Progreso guardado de la práctica: intentos, mejor porcentaje/puntos y si la materia está dominada.
-func obtener_practica_estado(id_materia: int) -> Dictionary:
-	var p := obtener_practica(id_materia)
+## Sortea los ejercicios de un intento de práctica: EJERCICIOS_PRACTICA al azar,
+## primero los del tema y, si faltan, los de lógica de programación (tema 1).
+func sortear_practica(id_tema: int) -> Array:
+	var propios := obtener_puzzles_tema(id_tema)
+	propios.shuffle()
+	var lista: Array = propios.slice(0, mini(EJERCICIOS_PRACTICA, propios.size()))
+	if lista.size() < EJERCICIOS_PRACTICA and id_tema != 1:
+		var generales := obtener_puzzles_tema(1)
+		generales.shuffle()
+		for e in generales:
+			if lista.size() >= EJERCICIOS_PRACTICA:
+				break
+			lista.append(e)
+	lista.shuffle()
+	return lista
+
+## Progreso guardado de la práctica: intentos, mejor porcentaje/puntos y si el tema está dominado.
+func obtener_practica_estado(id_tema: int) -> Dictionary:
+	var p := obtener_practica(id_tema)
 	if p.is_empty():
 		return {"intentos": 0, "mejor_porcentaje": -1, "mejor_puntos": 0, "dominada": false}
 	return {
@@ -666,17 +783,17 @@ func obtener_practica_estado(id_materia: int) -> Dictionary:
 		"dominada": bool(p.get("dominada", false)),
 	}
 
-## Precondición del CU-11: todos los módulos de la materia completados (≥ 70 %).
-func practica_disponible(id_materia: int) -> bool:
-	var mods := obtener_modulos_materia(id_materia)
-	if mods.is_empty() or obtener_practica(id_materia).is_empty():
+## Precondición del CU-11: todos los módulos del tema completados (≥ 70 %).
+func practica_disponible(id_tema: int) -> bool:
+	var mods := obtener_modulos_tema(id_tema)
+	if mods.is_empty() or obtener_practica(id_tema).is_empty():
 		return false
-	return modulos_completados_materia(id_materia) >= mods.size()
+	return modulos_completados_tema(id_tema) >= mods.size()
 
-func materia_dominada(id_materia: int) -> bool:
-	return bool(obtener_practica_estado(id_materia)["dominada"])
+func tema_dominado(id_tema: int) -> bool:
+	return bool(obtener_practica_estado(id_tema)["dominada"])
 
-func materias_dominadas() -> int:
+func temas_dominados() -> int:
 	var n := 0
 	for p in bd["practicas"]:
 		if p.get("dominada", false):
@@ -684,12 +801,12 @@ func materias_dominadas() -> int:
 	return n
 
 ## Paso 9 del CU-11: guarda el intento de la práctica, actualiza la puntuación
-## total y, si el porcentaje es ≥ 70 %, marca la materia como "Dominada".
+## total y, si el porcentaje es ≥ 70 %, marca el tema como "Dominado".
 ## Al rejugar una práctica dominada, el intento solo se guarda si supera al mejor (alt. 4).
-func registrar_intento_practica(id_materia: int, piezas_correctas: int, piezas_totales: int) -> Dictionary:
-	var p := obtener_practica(id_materia)
+func registrar_intento_practica(id_tema: int, piezas_correctas: int, piezas_totales: int) -> Dictionary:
+	var p := obtener_practica(id_tema)
 	if p.is_empty():
-		push_error("La materia %d no tiene práctica" % id_materia)
+		push_error("El tema %d no tiene práctica" % id_tema)
 		return {}
 	var porcentaje := int(round(float(piezas_correctas) / float(maxi(piezas_totales, 1)) * 100.0))
 	var puntos := int(round(float(piezas_correctas) / float(maxi(piezas_totales, 1)) * PUNTOS_PRACTICA))
@@ -703,7 +820,7 @@ func registrar_intento_practica(id_materia: int, piezas_correctas: int, piezas_t
 	if guardado:
 		bd["intentos_practica"].append({
 			"id": bd["intentos_practica"].size() + 1,
-			"id_materia": id_materia,
+			"id_tema": id_tema,
 			"fecha": Time.get_datetime_string_from_system(),
 			"correctas": piezas_correctas,
 			"total": piezas_totales,
@@ -745,25 +862,24 @@ func registrar_intento_practica(id_materia: int, piezas_correctas: int, piezas_t
 # =====================================================================
 #  CU-06: VER PROGRESO
 # =====================================================================
-## Lee el historial de intentos y regresa todo lo que muestra la pantalla
-## "Mi progreso": puntuación total, módulos completados/total, conceptos
-## dominados (mejor puntaje >= 70 %) y áreas de mejora (intentados con < 70 %).
+## Todo lo que necesita la pantalla "Mi progreso" (mockup CU-06):
+## puntuación total, módulos completados, dominados y áreas de mejora.
 func obtener_progreso() -> Dictionary:
 	var dominados: Array = []
 	var mejora: Array = []
 	for m in bd["modulos"]:
-		var mejor := int(m["mejor_puntaje"])
-		if mejor < 0:
-			continue                       # sin intentos: no aparece en ninguna lista
 		var intentos_mod := obtener_intentos(int(m["id"]))
-		var mejor_puntos := 0              # puntos del mejor intento (aunque no haya completado)
+		if intentos_mod.is_empty():
+			continue
+		var mejor := int(m["mejor_puntaje"])
+		var mejor_puntos := 0
 		for i in intentos_mod:
 			mejor_puntos = maxi(mejor_puntos, int(i["puntos"]))
-		var materia := obtener_materia(int(m.get("id_materia", 1)))
+		var tema := obtener_tema(int(m.get("id_tema", 1)))
 		var fila := {
 			"id": int(m["id"]),
 			"nombre": m["nombre"],
-			"materia": materia.get("nombre", ""),
+			"tema": tema.get("nombre", ""),
 			"mejor_porcentaje": mejor,
 			"mejor_puntos": mejor_puntos,
 			"intentos": intentos_mod.size(),
@@ -781,16 +897,17 @@ func obtener_progreso() -> Dictionary:
 		"dominados": dominados,
 		"areas_mejora": mejora,
 		"errores_pendientes": obtener_errores_pendientes().size(),     # CU-09
-		"materias_dominadas": materias_dominadas(),                      # CU-11
-		"materias_totales": bd["materias"].size(),
+		"temas_dominados": temas_dominados(),                            # CU-11
+		"temas_totales": bd["temas"].size(),
 	}
 
 
 # =====================================================================
-#  DATOS INICIALES (los 8 módulos y preguntas de los Mockups)
+#  DATOS INICIALES (contenido de la materia Introducción a la Ingeniería de Software)
 # =====================================================================
 func _bd_inicial() -> Dictionary:
 	return {
+		"esquema": ESQUEMA,
 		"perfil_jugador": {
 			"alias": "estudiante_%04d" % (randi() % 10000),   # perfil creado automáticamente (CU-01, SRS 1.1)
 			"avatar_id": "avatar_01",
@@ -798,35 +915,87 @@ func _bd_inicial() -> Dictionary:
 			"puntos_totales": 0,
 			"fecha_creacion": Time.get_datetime_string_from_system(),
 		},
-		# ---- CU-08: catálogo de materias del área de ingeniería de software ----
-		"materias": [
-			_materia(1, "Introducción a la Ingeniería de Software", "Intro. a Ing. de Software",
-				"Fundamentos, ciclo de vida, requerimientos, UML, diseño, pruebas, métricas y Scrum.", "libro", "#2F55E6"),
-			_materia(2, "Proceso de Software en Equipo", "Proceso en Equipo (TSP)",
-				"Roles, lanzamiento, planeación, estimación y seguimiento con valor ganado.", "grafica", "#178A4C"),
-			_materia(3, "Arquitectura y Diseño de Software", "Arquitectura y Diseño",
-				"Estilos arquitectónicos, patrones de diseño y principios SOLID.", "puzzle", "#7C3AED"),
+		"teoria_consultas": 0,
+		# ---- CU-08: temas de la materia Introducción a la Ingeniería de Software ----
+		"temas": [
+			_tema(1, "Fundamentos de la ingeniería de software", "Fundamentos",
+				"Qué es la ingeniería de software, crisis del software, atributos y actividades del proceso; lógica de programación básica.", "libro", "#2F55E6"),
+			_tema(2, "Ciclo de vida del software", "Ciclo de vida",
+				"Cascada, modelo en V, incremental, prototipado, espiral y el Manifiesto Ágil.", "reiniciar", "#178A4C"),
+			_tema(3, "Requerimientos de software", "Requerimientos",
+				"Elicitación, requerimientos de usuario y de sistema, historias de usuario, validación y trazabilidad.", "lapiz", "#7C3AED"),
+			_tema(4, "Modelado con UML", "Modelado UML",
+				"Casos de uso, clases, secuencia, actividad, estados y despliegue.", "mapa", "#0E7490"),
+			_tema(5, "Diseño de software", "Diseño",
+				"Abstracción, encapsulamiento, modularidad, acoplamiento, MVC, DRY/KISS y refactorización.", "puzzle", "#C2410C"),
+			_tema(6, "Pruebas de software", "Pruebas",
+				"Niveles de prueba, caja negra, valores límite, particiones, TDD y pruebas no funcionales.", "check", "#14633A"),
+			_tema(7, "Métricas y estimación", "Métricas",
+				"LOC, complejidad ciclomática, densidad de defectos, productividad, COCOMO y GQM.", "quiz", "#D97706"),
+			_tema(8, "Gestión ágil con Scrum", "Gestión ágil",
+				"Roles, eventos, backlog, Definition of Done, estimación ágil, burndown y Kanban.", "play", "#B45309"),
+			_tema(9, "Calidad de software", "Calidad",
+				"Verificación y validación, ISO/IEC 25010, revisiones e inspecciones, QA y QC.", "estrella", "#2F55E6"),
+			_tema(10, "Control de versiones", "Control de versiones",
+				"Git: commits, ramas, merge, repositorio remoto y pull requests.", "guardar", "#178A4C"),
+			_tema(11, "Gestión de proyectos y riesgos", "Proyectos y riesgos",
+				"Triple restricción, WBS, hitos y Gantt, riesgos y estrategias para enfrentarlos.", "alerta", "#7C3AED"),
+			_tema(12, "Ética profesional", "Ética",
+				"Código de ética ACM/IEEE, honestidad, licencias y propiedad intelectual, privacidad.", "ojo", "#0E7490"),
 		],
-		"ultima_materia": 1,
+		"ultimo_tema": 1,
+		# ---- Módulos: cada tema tiene Quiz I, Quiz II y Puzzle (ids = tema*100 + n) ----
 		"modulos": [
-			# Materia 1 · Introducción a la Ingeniería de Software (Sprint 1 y 2)
-			_modulo(1, "Fundamentos", "quiz", "5 preguntas sobre qué es la ingeniería de software.", "desbloqueado"),
-			_modulo(2, "Ciclo de vida", "quiz", "5 preguntas sobre modelos de ciclo de vida."),
-			_modulo(3, "Requerimientos de software", "quiz", "5 preguntas sobre requerimientos funcionales y no funcionales."),
-			_modulo(4, "Modelado con UML", "quiz", "5 preguntas sobre diagramas UML."),
-			_modulo(5, "Diseño", "puzzle", "Acertijos de diseño y arquitectura."),
-			_modulo(6, "Pruebas", "quiz", "5 preguntas sobre pruebas de software."),
-			_modulo(7, "Métricas", "puzzle", "Acertijos sobre métricas y estimación."),
-			_modulo(8, "Gestión ágil", "quiz", "5 preguntas sobre Scrum y metodologías ágiles."),
-			# Materia 2 · Proceso de Software en Equipo (Sprint 3, CU-08)
-			_modulo(9, "Roles y lanzamiento", "quiz", "5 preguntas sobre el TSP, sus roles y el lanzamiento del equipo.", "desbloqueado", 2),
-			_modulo(10, "Planeación y estimación", "quiz", "5 preguntas sobre horas de tarea, valor planeado y estimación.", "bloqueado", 2),
-			_modulo(11, "Valor ganado", "quiz", "5 preguntas sobre seguimiento del plan con EV, PV, SPI y CPI.", "bloqueado", 2),
-			# Materia 3 · Arquitectura y Diseño de Software (Sprint 3, CU-08)
-			_modulo(12, "Estilos arquitectónicos", "quiz", "5 preguntas sobre monolitos, cliente-servidor, capas y microservicios.", "desbloqueado", 3),
-			_modulo(13, "Patrones de diseño", "quiz", "5 preguntas sobre Observador, Estrategia, Fábrica y Adaptador.", "bloqueado", 3),
-			_modulo(14, "Principios SOLID", "quiz", "5 preguntas sobre los cinco principios SOLID.", "bloqueado", 3),
+			# Tema 1 · Fundamentos de la ingeniería de software
+			_modulo(101, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre fundamentos: lo básico del tema.", "desbloqueado", 1),
+			_modulo(102, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 1),
+			_modulo(103, "Puzzle · Manos a la obra", "puzzle", "6 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 1, 6),
+			# Tema 2 · Ciclo de vida del software
+			_modulo(201, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre ciclo de vida: lo básico del tema.", "desbloqueado", 2),
+			_modulo(202, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 2),
+			_modulo(203, "Puzzle · Manos a la obra", "puzzle", "3 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 2, 3),
+			# Tema 3 · Requerimientos de software
+			_modulo(301, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre requerimientos: lo básico del tema.", "desbloqueado", 3),
+			_modulo(302, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 3),
+			_modulo(303, "Puzzle · Manos a la obra", "puzzle", "4 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 3, 4),
+			# Tema 4 · Modelado con UML
+			_modulo(401, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre modelado UML: lo básico del tema.", "desbloqueado", 4),
+			_modulo(402, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 4),
+			_modulo(403, "Puzzle · Manos a la obra", "puzzle", "4 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 4, 4),
+			# Tema 5 · Diseño de software
+			_modulo(501, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre diseño: lo básico del tema.", "desbloqueado", 5),
+			_modulo(502, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 5),
+			_modulo(503, "Puzzle · Manos a la obra", "puzzle", "4 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 5, 4),
+			# Tema 6 · Pruebas de software
+			_modulo(601, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre pruebas: lo básico del tema.", "desbloqueado", 6),
+			_modulo(602, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 6),
+			_modulo(603, "Puzzle · Manos a la obra", "puzzle", "4 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 6, 4),
+			# Tema 7 · Métricas y estimación
+			_modulo(701, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre métricas: lo básico del tema.", "desbloqueado", 7),
+			_modulo(702, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 7),
+			_modulo(703, "Puzzle · Manos a la obra", "puzzle", "3 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 7, 3),
+			# Tema 8 · Gestión ágil con Scrum
+			_modulo(801, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre gestión ágil: lo básico del tema.", "desbloqueado", 8),
+			_modulo(802, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 8),
+			_modulo(803, "Puzzle · Manos a la obra", "puzzle", "3 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 8, 3),
+			# Tema 9 · Calidad de software
+			_modulo(901, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre calidad: lo básico del tema.", "desbloqueado", 9),
+			_modulo(902, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 9),
+			_modulo(903, "Puzzle · Manos a la obra", "puzzle", "3 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 9, 3),
+			# Tema 10 · Control de versiones
+			_modulo(1001, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre control de versiones: lo básico del tema.", "desbloqueado", 10),
+			_modulo(1002, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 10),
+			_modulo(1003, "Puzzle · Manos a la obra", "puzzle", "3 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 10, 3),
+			# Tema 11 · Gestión de proyectos y riesgos
+			_modulo(1101, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre proyectos y riesgos: lo básico del tema.", "desbloqueado", 11),
+			_modulo(1102, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 11),
+			_modulo(1103, "Puzzle · Manos a la obra", "puzzle", "3 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 11, 3),
+			# Tema 12 · Ética profesional
+			_modulo(1201, "Quiz I · Conceptos", "quiz", "5 preguntas al azar sobre ética: lo básico del tema.", "desbloqueado", 12),
+			_modulo(1202, "Quiz II · Aplicación", "quiz", "Otras 5 preguntas al azar del tema, con escenarios y cálculos.", "bloqueado", 12),
+			_modulo(1203, "Puzzle · Manos a la obra", "puzzle", "2 ejercicios para clasificar, ordenar y armar con lo aprendido.", "bloqueado", 12, 2),
 		],
+		# ---- Banco de preguntas: 15 por tema (5 se sortean en cada intento) ----
 		"reactivos": [
 			# ---- Módulo 1 · Fundamentos ----
 			_reactivo(1, 1, "¿Qué es la ingeniería de software?",
@@ -956,106 +1125,381 @@ func _bd_inicial() -> Dictionary:
 			_reactivo(40, 8, "¿Qué evento sirve para que el equipo mejore su forma de trabajar?",
 				["Sprint Retrospective", "Sprint Review", "Refinamiento", "Daily Scrum"], 0,
 				"En la retrospectiva el equipo reflexiona sobre su proceso y acuerda mejoras.", "retrospectiva"),
-			# ---- Módulo 9 · Roles y lanzamiento (TSP) ----
-			_reactivo(41, 9, "¿Qué es el TSP (Team Software Process)?",
-				["Un lenguaje de programación", "Un proceso para que equipos autodirigidos planeen, midan y mejoren su trabajo", "Una herramienta de control de versiones", "Un tipo de prueba de software"], 1,
-				"El TSP guía a equipos pequeños para planear, dar seguimiento y mejorar su proceso con datos.", "tsp"),
-			_reactivo(42, 9, "¿Qué rol del TSP coordina al equipo y da seguimiento al plan semana a semana?",
-				["Líder de equipo", "Gerente de desarrollo", "Gerente de calidad", "Gerente de soporte"], 0,
-				"El líder de equipo dirige las reuniones, motiva al equipo y vigila el avance del plan.", "roles_tsp"),
-			_reactivo(43, 9, "¿Qué rol vigila que se cumplan los estándares y que se hagan las inspecciones?",
-				["Gerente de planeación", "Gerente de calidad y proceso", "Gerente de desarrollo", "Líder de equipo"], 1,
-				"El gerente de calidad y proceso cuida que el equipo siga el proceso y registre los defectos.", "roles_tsp"),
-			_reactivo(44, 9, "El evento donde el equipo define metas, roles y plan al inicio del ciclo se llama:",
-				["Retrospectiva", "Postmortem", "Lanzamiento (launch)", "Daily Scrum"], 2,
-				"En el lanzamiento el equipo acuerda metas, asigna roles, estima y construye el plan del ciclo.", "lanzamiento"),
-			_reactivo(45, 9, "¿Qué documento firma el equipo para fijar sus reglas de trabajo y compromisos?",
-				["Manual de usuario", "Acuerdo de equipo", "Diagrama de Gantt", "Plan de pruebas"], 1,
-				"El acuerdo de equipo (team agreement) establece horarios, comunicación, roles y sanciones.", "acuerdo_equipo"),
-			# ---- Módulo 10 · Planeación y estimación ----
-			_reactivo(46, 10, "¿En qué unidad se estima el esfuerzo de cada tarea en el plan del TSP?",
-				["Horas de tarea", "Líneas de documentación", "Número de reuniones", "Puntos de historia"], 0,
-				"Cada tarea del plan se estima en horas de tarea; con ellas se construye el calendario.", "horas_tarea"),
-			_reactivo(47, 10, "¿Qué es el valor planeado (PV) de una tarea?",
-				["Las horas reales que tomó", "El porcentaje del esfuerzo total del plan que representa", "El dinero que cuesta", "Su fecha de entrega"], 1,
-				"PV = horas estimadas de la tarea / horas totales del plan × 100.", "valor_planeado"),
-			_reactivo(48, 10, "Un equipo de 3 personas dispone de 10 h por semana cada una. Si el plan son 90 h, ¿cuántas semanas dura?",
-				["1", "2", "3", "9"], 2,
-				"30 h disponibles por semana × 3 semanas = 90 h.", "horas_tarea"),
-			_reactivo(49, 10, "¿Qué método del PSP/TSP usa datos históricos para estimar tamaño y tiempo?",
-				["PROBE", "SCRUM", "UML", "KLOC"], 0,
-				"PROBE (PROxy Based Estimating) estima a partir de datos de proyectos anteriores.", "probe"),
-			_reactivo(50, 10, "El diagrama de Gantt y el tablero de tareas sirven para:",
-				["Compilar el código", "Visualizar el calendario y el avance de las tareas", "Medir la complejidad", "Probar la interfaz"], 1,
-				"Gantt muestra tareas contra tiempo; el tablero muestra qué está por hacer, en curso y hecho.", "gantt"),
-			# ---- Módulo 11 · Valor ganado ----
-			_reactivo(51, 11, "¿Qué es el valor ganado (EV)?",
-				["La suma del valor planeado de las tareas terminadas", "Las horas trabajadas", "El dinero recibido", "El número de tareas pendientes"], 0,
-				"EV acumula el PV de cada tarea cuando ésta se termina al 100 %.", "valor_ganado_tsp"),
-			_reactivo(52, 11, "Si al final de la semana PV = 60 % y EV = 45 %, el proyecto va:",
-				["Adelantado", "Retrasado", "En tiempo", "Terminado"], 1,
-				"EV < PV significa que se ha ganado menos valor del planeado: hay retraso.", "valor_ganado_tsp"),
-			_reactivo(53, 11, "SPI = EV / PV. Un SPI de 1.2 significa que el equipo:",
-				["Avanza más rápido de lo planeado", "Va retrasado", "Gasta de más", "Terminó el proyecto"], 0,
-				"SPI > 1 indica más valor ganado que planeado: el equipo va adelantado.", "spi_cpi"),
-			_reactivo(54, 11, "CPI = EV / AC. Un CPI menor que 1 significa que:",
-				["Sobran horas", "Se gasta más esfuerzo del planeado por cada unidad de valor", "El plan es perfecto", "No hay defectos"], 1,
-				"CPI < 1: el costo real (horas) supera lo planeado para el valor obtenido.", "spi_cpi"),
-			_reactivo(55, 11, "¿Cuándo se registra el valor ganado de una tarea en el TSP?",
-				["Al empezarla", "Cuando lleva 50 %", "Solo cuando está 100 % terminada", "Al final del proyecto"], 2,
-				"En TSP una tarea aporta su valor solo al terminarse por completo; no hay crédito parcial.", "valor_ganado_tsp"),
-			# ---- Módulo 12 · Estilos arquitectónicos ----
-			_reactivo(56, 12, "¿Qué es la arquitectura de software?",
-				["El código de la interfaz", "La estructura de alto nivel: componentes y sus relaciones", "La lista de requerimientos", "El manual de instalación"], 1,
-				"La arquitectura define los componentes principales del sistema y cómo se comunican.", "arquitectura"),
-			_reactivo(57, 12, "¿Qué estilo divide el sistema en un cliente que pide servicios y un servidor que responde?",
-				["Cliente-servidor", "Monolito", "Tubería y filtros", "Pizarra"], 0,
-				"En cliente-servidor los clientes hacen peticiones y el servidor centraliza datos y lógica.", "cliente_servidor"),
-			_reactivo(58, 12, "¿Qué estilo divide la aplicación en servicios pequeños, independientes y desplegables por separado?",
-				["Capas", "Monolito", "Microservicios", "Cliente-servidor"], 2,
-				"Los microservicios son servicios pequeños con su propia base de datos y despliegue.", "microservicios"),
-			_reactivo(59, 12, "Un monolito es:",
-				["Una aplicación que se despliega como una sola unidad", "Un conjunto de servicios", "Una base de datos", "Un patrón de diseño"], 0,
-				"En un monolito toda la funcionalidad vive en un solo ejecutable; es simple pero difícil de escalar.", "monolito"),
-			_reactivo(60, 12, "¿Qué atributo de calidad mide qué tan fácil es modificar el sistema?",
-				["Rendimiento", "Mantenibilidad", "Disponibilidad", "Seguridad"], 1,
-				"La mantenibilidad es la facilidad para corregir, adaptar y mejorar el software.", "atributos_calidad"),
-			# ---- Módulo 13 · Patrones de diseño ----
-			_reactivo(61, 13, "Los patrones de diseño son:",
-				["Soluciones probadas a problemas recurrentes de diseño", "Plantillas de interfaz", "Lenguajes de programación", "Pruebas automatizadas"], 0,
-				"Un patrón describe una solución reutilizable a un problema de diseño que aparece una y otra vez.", "patrones"),
-			_reactivo(62, 13, "¿Qué patrón notifica a varios objetos cuando otro cambia de estado?",
-				["Singleton", "Observador", "Fábrica", "Adaptador"], 1,
-				"El Observador mantiene una lista de suscriptores y les avisa de cada cambio.", "observador"),
-			_reactivo(63, 13, "¿Qué patrón permite intercambiar algoritmos en tiempo de ejecución?",
-				["Estrategia", "Decorador", "Singleton", "Compuesto"], 0,
-				"Estrategia encapsula cada algoritmo en una clase intercambiable con la misma interfaz.", "estrategia"),
-			_reactivo(64, 13, "¿Qué patrón crea objetos sin exponer al cliente la lógica de creación?",
-				["Observador", "Adaptador", "Fábrica", "Estrategia"], 2,
-				"La Fábrica centraliza la creación de objetos y devuelve la clase concreta adecuada.", "fabrica"),
-			_reactivo(65, 13, "¿Qué patrón convierte la interfaz de una clase en otra que el cliente espera?",
-				["Adaptador", "Singleton", "Observador", "Fachada"], 0,
-				"El Adaptador envuelve una clase incompatible para que funcione con la interfaz esperada.", "adaptador"),
-			# ---- Módulo 14 · Principios SOLID ----
-			_reactivo(66, 14, "El principio abierto/cerrado (O de SOLID) dice que una clase debe estar:",
-				["Abierta a la modificación y cerrada a la extensión", "Abierta a la extensión y cerrada a la modificación", "Siempre abierta", "Siempre cerrada"], 1,
-				"Se agrega comportamiento extendiendo (herencia, interfaces), no modificando el código existente.", "ocp"),
-			_reactivo(67, 14, "El principio de sustitución de Liskov (L) dice que:",
-				["Una subclase debe poder usarse en lugar de su clase base sin romper el programa", "Toda clase debe tener un constructor", "Las clases no deben heredar", "Los métodos deben ser estáticos"], 0,
-				"Si una subclase cambia el comportamiento esperado de la base, viola Liskov.", "lsp"),
-			_reactivo(68, 14, "La segregación de interfaces (I) recomienda:",
-				["Una sola interfaz gigante", "Interfaces pequeñas y específicas para cada cliente", "No usar interfaces", "Interfaces solo en la vista"], 1,
-				"Ningún cliente debe depender de métodos que no usa.", "isp"),
-			_reactivo(69, 14, "La inversión de dependencias (D) dice que los módulos de alto nivel deben depender de:",
-				["Clases concretas", "La base de datos", "Abstracciones (interfaces)", "El sistema operativo"], 2,
-				"Alto y bajo nivel dependen de abstracciones; así se puede cambiar la implementación sin tocar la lógica.", "dip"),
-			_reactivo(70, 14, "¿Qué 'code smell' indica que una clase hace demasiadas cosas (viola la S de SOLID)?",
-				["Método corto", "Clase Dios (God class)", "Nombre descriptivo", "Prueba unitaria"], 1,
-				"Una clase Dios concentra demasiadas responsabilidades y es difícil de mantener y probar.", "srp"),
+			# ---- Tema 1 · banco Sprint 3 ----
+			_reactivo(71, 1, "¿Qué fue la «crisis del software»?",
+				["Una caída mundial de internet", "La falta de computadoras en las universidades", "Un virus que borró sistemas en los años 80", "Una época en que muchos proyectos se entregaban tarde, costaban de más y fallaban"], 3,
+				"En los años 60 y 70 muchos proyectos se salían de tiempo y presupuesto; por eso nació la ingeniería de software.", "crisis_software"),
+			_reactivo(72, 1, "¿En qué evento se popularizó el término «ingeniería de software»?",
+				["Una conferencia de la OTAN en 1968", "La fundación de Google en 1998", "El lanzamiento de Windows en 1985", "La creación de la web en 1991"], 0,
+				"La conferencia de la OTAN de 1968 propuso tratar el software con métodos de ingeniería.", "crisis_software"),
+			_reactivo(73, 1, "Además del código, ¿qué forma parte de un producto de software?",
+				["Solo el código fuente", "El salario de los programadores", "La documentación y los datos de configuración", "El celular donde se instala"], 2,
+				"El software incluye el código, su documentación y los datos de configuración que necesita.", "producto_software"),
+			_reactivo(74, 1, "Un procesador de textos que se vende a cualquier persona es un producto:",
+				["Genérico", "Embebido", "Experimental", "A la medida"], 0,
+				"Los productos genéricos se venden a muchos clientes; los a la medida se hacen para uno solo.", "producto_software"),
+			_reactivo(75, 1, "¿Cuáles son las cuatro actividades básicas de todo proceso de software?",
+				["Diseño, dibujo, impresión y entrega", "Compilar, ejecutar, depurar e instalar", "Venta, compra, cobro y soporte", "Especificación, desarrollo, validación y evolución"], 3,
+				"Todo proceso define qué hacer, lo construye, lo comprueba y lo cambia con el tiempo.", "actividades_proceso"),
+			_reactivo(76, 1, "Comprobar que el sistema hace lo que el cliente pidió corresponde a la actividad de:",
+				["Especificación", "Validación", "Evolución", "Instalación"], 1,
+				"La validación comprueba que el software cumple con lo que el cliente necesita.", "actividades_proceso"),
+			_reactivo(77, 1, "Que el software se pueda modificar fácilmente cuando cambian las necesidades es:",
+				["Aceptabilidad", "Eficiencia", "Mantenibilidad", "Portabilidad"], 2,
+				"La mantenibilidad es la facilidad con que el software puede cambiar y evolucionar.", "atributos_software"),
+			_reactivo(78, 1, "Que una app no desperdicie memoria ni batería se relaciona con:",
+				["Eficiencia", "Confiabilidad", "Aceptabilidad", "Mantenibilidad"], 0,
+				"La eficiencia es usar bien los recursos: procesador, memoria y batería.", "atributos_software"),
+			_reactivo(79, 1, "En sistemas que se usan durante muchos años, ¿qué etapa suele costar más en total?",
+				["La primera reunión con el cliente", "La instalación", "El mantenimiento y la evolución", "La elección del logotipo"], 2,
+				"Los sistemas siguen cambiando años después de entregarse; esos cambios suelen costar más que el desarrollo inicial.", "mantenimiento"),
+			_reactivo(80, 1, "¿En qué se diferencia la ingeniería de software de las ciencias de la computación?",
+				["No tiene relación con la programación", "Se enfoca en las prácticas para construir y entregar software útil", "Solo estudia el hardware", "Se dedica únicamente a la teoría matemática"], 1,
+				"Las ciencias de la computación estudian la teoría; la ingeniería de software, cómo desarrollar software de calidad en la práctica.", "ing_software"),
+			# ---- Tema 2 · banco Sprint 3 ----
+			_reactivo(81, 2, "¿Cuál es la principal desventaja del modelo en cascada?",
+				["Solo sirve para videojuegos", "No incluye una fase de pruebas", "Es difícil responder a cambios en los requerimientos cuando el proyecto ya avanzó", "Obliga a entregar algo cada semana"], 2,
+				"En cascada cada fase se cierra antes de la siguiente; volver atrás por un cambio es costoso.", "cascada"),
+			_reactivo(82, 2, "¿Cuándo conviene usar el modelo en cascada?",
+				["Cuando hay mucha incertidumbre técnica", "Cuando los requerimientos son claros y casi no van a cambiar", "Cuando se quiere entregar cada dos semanas", "Cuando el cliente no sabe qué quiere"], 1,
+				"Cascada funciona bien si los requerimientos están definidos y estables desde el inicio.", "cascada"),
+			_reactivo(83, 2, "En el modelo en V, cada fase de desarrollo se relaciona con:",
+				["Una versión del sistema operativo", "Un nivel de prueba correspondiente", "Un lenguaje de programación", "Un integrante distinto del equipo"], 1,
+				"El modelo en V asocia cada fase de construcción con la prueba que la valida.", "modelo_v"),
+			_reactivo(84, 2, "En el modelo en V, los requerimientos del cliente se validan con:",
+				["Pruebas unitarias", "Pruebas de aceptación", "Revisión del logotipo", "Pruebas de compilación"], 1,
+				"Lo más cercano al cliente (requerimientos) se comprueba con la prueba más cercana al cliente (aceptación).", "modelo_v"),
+			_reactivo(85, 2, "¿Qué ventaja tiene el desarrollo incremental?",
+				["No necesita pruebas", "Todo se entrega en una sola fecha final", "El cliente recibe partes funcionales pronto y puede opinar sobre ellas", "Nunca cambian los requerimientos"], 2,
+				"Cada incremento entrega funcionalidad útil y permite ajustar el rumbo con la opinión del cliente.", "iterativo"),
+			_reactivo(86, 2, "¿Cuál es un riesgo del modelo de prototipado?",
+				["Que el cliente crea que el prototipo ya es el producto terminado", "Que el prototipo sea demasiado caro", "Que impida hablar con los usuarios", "Que no se pueda mostrar al cliente"], 0,
+				"Un prototipo se ve funcional, pero no tiene la calidad del producto final; hay que dejarlo claro.", "prototipado"),
+			_reactivo(87, 2, "Un prototipo desechable es aquel que:",
+				["Se construye para entender los requerimientos y después se descarta", "Se guarda sin mostrarlo a nadie", "Se vende al cliente como versión final", "Se usa solo para pruebas de carga"], 0,
+				"El prototipo desechable sirve para aprender qué quiere el cliente; luego el sistema se construye bien.", "prototipado"),
+			_reactivo(88, 2, "Un sistema bancario grande, con mucha incertidumbre técnica y alto costo si falla. ¿Qué modelo conviene?",
+				["Big Bang", "Codificar y corregir", "Cascada", "Espiral"], 3,
+				"El modelo en espiral analiza los riesgos en cada vuelta; es ideal para proyectos grandes y riesgosos.", "espiral"),
+			_reactivo(89, 2, "Un cliente no tiene claro qué necesita y quiere ver algo antes de decidir. ¿Qué modelo conviene?",
+				["Prototipado", "Big Bang", "Cascada", "Modelo en V"], 0,
+				"El prototipado permite que el cliente vea y pruebe una versión preliminar para aclarar sus necesidades.", "prototipado"),
+			_reactivo(90, 2, "El Manifiesto Ágil valora más:",
+				["A los procesos que a las personas", "A seguir un plan que a responder al cambio", "A los contratos que a la colaboración con el cliente", "Al software funcionando que a la documentación extensa"], 3,
+				"El Manifiesto Ágil prioriza el software que funciona, sin despreciar la documentación.", "agil"),
+			# ---- Tema 3 · banco Sprint 3 ----
+			_reactivo(91, 3, "¿Qué técnica de elicitación consiste en observar al usuario mientras trabaja?",
+				["Etnografía u observación", "Cuestionario", "Lluvia de ideas", "Compilación"], 0,
+				"Observar al usuario en su entorno revela necesidades que no menciona en una entrevista.", "elicitacion"),
+			_reactivo(92, 3, "¿Cuál requerimiento está mejor escrito?",
+				["El sistema será rápido", "El sistema funcionará bien", "El sistema mostrará los resultados de la búsqueda en menos de 3 segundos", "La interfaz será amigable"], 2,
+				"Un buen requerimiento es medible y verificable; «rápido» o «amigable» no se pueden probar.", "verificabilidad"),
+			_reactivo(93, 3, "¿Para quién se escriben los requerimientos de usuario?",
+				["Solo para los probadores", "Para el sistema operativo", "Para el cliente, en lenguaje natural", "Para el compilador"], 2,
+				"Los requerimientos de usuario se escriben para que el cliente los entienda; los de sistema dan el detalle técnico.", "req_usuario_sistema"),
+			_reactivo(94, 3, "Validar los requerimientos significa:",
+				["Contar cuántas páginas tiene el SRS", "Traducirlos a inglés", "Programarlos lo más rápido posible", "Comprobar que describen lo que el cliente realmente necesita"], 3,
+				"La validación confirma con el cliente que lo escrito es lo que necesita.", "validacion_req"),
+			_reactivo(95, 3, "¿Qué técnica sirve para validar requerimientos?",
+				["Medir las líneas de código", "Instalar la app en un servidor", "Cambiar el lenguaje de programación", "Revisarlos junto con el cliente"], 3,
+				"Las revisiones con el cliente y los prototipos son las técnicas más usadas para validar requerimientos.", "validacion_req"),
+			_reactivo(96, 3, "Si un error en los requerimientos se descubre hasta la etapa de pruebas:",
+				["Corregirlo cuesta mucho más que si se hubiera detectado al especificar", "Ya no se puede corregir", "Se corrige solo", "Cuesta lo mismo corregirlo en cualquier etapa"], 0,
+				"Mientras más tarde se encuentra un error de requerimientos, más trabajo hay que rehacer.", "validacion_req"),
+			_reactivo(97, 3, "¿Cuál es el formato de una historia de usuario?",
+				["Entrada, salida y error", "Como (rol), quiero (acción), para (beneficio)", "Inicio, proceso y fin", "Si (condición), entonces (acción)"], 1,
+				"Una historia de usuario dice quién lo pide, qué quiere y para qué le sirve.", "historia_usuario"),
+			_reactivo(98, 3, "En la priorización MoSCoW, un requerimiento «Must have» es:",
+				["Uno que no se hará", "Un requerimiento del diseño gráfico", "Opcional si sobra tiempo", "Indispensable para la entrega"], 3,
+				"Must = sin él no se puede entregar; Should = importante; Could = deseable; Won't = no en esta entrega.", "priorizacion"),
+			_reactivo(99, 3, "«La app debe estar disponible el 99 % del tiempo» es un requerimiento no funcional de:",
+				["Disponibilidad", "Usabilidad", "Funcionalidad", "Portabilidad"], 0,
+				"Es una cualidad del sistema (disponibilidad), no una acción que realiza.", "req_no_funcional"),
+			_reactivo(100, 3, "¿Qué es la trazabilidad de requerimientos?",
+				["Dibujar la interfaz a mano", "Poder seguir cada requerimiento hasta su diseño, su código y sus pruebas", "Borrar los requerimientos que no gustan", "Contar los requerimientos del SRS"], 1,
+				"La trazabilidad, normalmente en una matriz, une cada requerimiento con lo que lo implementa y lo prueba.", "trazabilidad"),
+			# ---- Tema 4 · banco Sprint 3 ----
+			_reactivo(101, 4, "En un diagrama de casos de uso, «include» indica que:",
+				["Un actor hereda de otro actor", "Un caso de uso a veces agrega un comportamiento opcional", "El sistema se conecta a internet", "Un caso de uso siempre incorpora el comportamiento de otro"], 3,
+				"«Include» es obligatorio: «Pagar» siempre incluye «Validar tarjeta».", "include_extend"),
+			_reactivo(102, 4, "«Aplicar cupón de descuento» ocurre solo si el usuario tiene un cupón. Respecto a «Pagar», ¿qué relación es?",
+				["«extend»", "Herencia entre actores", "Composición", "«include»"], 0,
+				"«Extend» se usa para comportamiento opcional que solo ocurre bajo cierta condición.", "include_extend"),
+			_reactivo(103, 4, "En un diagrama de clases, el símbolo «−» antes de un atributo significa que es:",
+				["Privado", "Público", "Estático", "Protegido"], 0,
+				"En UML: + público, − privado, # protegido.", "diag_clases"),
+			_reactivo(104, 4, "En un diagrama de clases, la multiplicidad «1..*» significa:",
+				["Ninguno", "Uno o más", "Exactamente uno", "Cero o uno"], 1,
+				"«1..*» indica que debe haber al menos uno y puede haber muchos.", "diag_clases"),
+			_reactivo(105, 4, "Una Casa tiene Habitaciones; si se destruye la casa, las habitaciones dejan de existir. ¿Qué relación es?",
+				["Herencia", "Dependencia", "Agregación", "Composición"], 3,
+				"En la composición la parte no existe sin el todo; se dibuja con rombo relleno.", "herencia"),
+			_reactivo(106, 4, "¿Qué diagrama muestra los estados de un objeto y cómo pasa de uno a otro?",
+				["Diagrama de clases", "Diagrama de despliegue", "Diagrama de estados", "Diagrama de casos de uso"], 2,
+				"El diagrama de estados muestra estados, eventos y transiciones.", "diag_estados"),
+			_reactivo(107, 4, "Quieres mostrar que un pedido pasa por creado, pagado, enviado y entregado. ¿Qué diagrama usas?",
+				["Diagrama de paquetes", "Diagrama de componentes", "Diagrama de estados", "Diagrama de clases"], 2,
+				"Cuando algo cambia de estado a lo largo del tiempo, se usa el diagrama de estados.", "diag_estados"),
+			_reactivo(108, 4, "¿Qué diagrama muestra en qué celulares o servidores se ejecuta cada parte del sistema?",
+				["Diagrama de despliegue", "Diagrama de secuencia", "Diagrama de actividad", "Diagrama de casos de uso"], 0,
+				"El diagrama de despliegue muestra los nodos físicos y sus conexiones.", "diag_despliegue"),
+			_reactivo(109, 4, "¿Cuál de estos es un diagrama de comportamiento?",
+				["Diagrama de despliegue", "Diagrama de clases", "Diagrama de componentes", "Diagrama de secuencia"], 3,
+				"Secuencia, actividad, casos de uso y estados muestran comportamiento; clases, componentes y despliegue, estructura.", "uml_tipos"),
+			_reactivo(110, 4, "¿Qué significan las siglas UML?",
+				["Lenguaje de Usuario Móvil", "Lenguaje Unificado de Modelado", "Lenguaje Universal de Máquinas", "Lista Única de Módulos"], 1,
+				"UML es el Unified Modeling Language: una notación estándar para modelar software.", "uml_tipos"),
+			# ---- Tema 5 · banco Sprint 3 ----
+			_reactivo(111, 5, "Usar un método «enviarCorreo()» sin saber cómo se conecta al servidor es un ejemplo de:",
+				["Redundancia", "Herencia", "Acoplamiento", "Abstracción"], 3,
+				"La abstracción permite usar algo por lo que hace, sin conocer sus detalles internos.", "abstraccion"),
+			_reactivo(112, 5, "Que una clase esconda sus datos y solo exponga métodos para usarlos se llama:",
+				["Duplicación", "Encapsulamiento", "Compilación", "Polimorfismo"], 1,
+				"El encapsulamiento protege los datos internos y expone solo una interfaz.", "ocultamiento"),
+			_reactivo(113, 5, "Una clase que solo se encarga de las operaciones de facturación tiene:",
+				["Baja cohesión", "Alta redundancia", "Alta cohesión", "Alto acoplamiento"], 2,
+				"Alta cohesión: todo lo que hace la clase está relacionado con una sola tarea.", "acoplamiento"),
+			_reactivo(114, 5, "Si al cambiar la clase Pago tienes que modificar otras diez clases, el diseño tiene:",
+				["Buena modularidad", "Alto acoplamiento", "Bajo acoplamiento", "Alta cohesión"], 1,
+				"Cuando un cambio obliga a cambiar muchas otras partes, las clases dependen demasiado entre sí.", "acoplamiento"),
+			_reactivo(115, 5, "Copiar y pegar la misma validación en cinco pantallas viola el principio:",
+				["Singleton", "KISS (Mantenlo simple)", "MVC", "DRY (No te repitas)"], 3,
+				"DRY pide tener cada lógica en un solo lugar para cambiarla una sola vez.", "dry_kiss"),
+			_reactivo(116, 5, "El principio KISS recomienda:",
+				["Repetir el código para que sea más claro", "Usar siempre el patrón más complejo", "Agregar todas las funciones posibles", "Elegir la solución más sencilla que funcione"], 3,
+				"KISS: «Keep it simple». Lo simple es más fácil de entender, probar y mantener.", "dry_kiss"),
+			_reactivo(117, 5, "Dividir el sistema en partes con funciones bien definidas que se prueban por separado se llama:",
+				["Compilación", "Duplicación", "Modularidad", "Monolitismo"], 2,
+				"La modularidad permite construir, probar y cambiar cada parte de forma independiente.", "modularidad"),
+			_reactivo(118, 5, "El diseño arquitectónico define:",
+				["Los componentes principales del sistema y cómo se comunican", "El precio de la aplicación", "El color de cada botón", "Los nombres de las variables"], 0,
+				"La arquitectura es la vista general; el diseño detallado define cada componente por dentro.", "niveles_diseno"),
+			_reactivo(119, 5, "Refactorizar el código significa:",
+				["Mejorar su estructura interna sin cambiar lo que hace", "Borrar las pruebas", "Agregar funciones nuevas", "Traducirlo a otro lenguaje"], 0,
+				"Refactorizar es ordenar y limpiar el código manteniendo su comportamiento.", "refactorizacion"),
+			_reactivo(120, 5, "En MVC, ¿qué parte recibe las acciones del usuario y decide qué hacer con ellas?",
+				["El modelo", "El controlador", "La base de datos", "La vista"], 1,
+				"El controlador recibe la acción, actualiza el modelo y elige qué vista mostrar.", "mvc"),
+			# ---- Tema 6 · banco Sprint 3 ----
+			_reactivo(121, 6, "¿Qué verifica una prueba de integración?",
+				["El diseño gráfico de la app", "Que el cliente apruebe la entrega", "Una sola función aislada", "Que varios módulos funcionen bien juntos"], 3,
+				"La integración prueba la comunicación entre módulos que ya pasaron sus pruebas unitarias.", "aceptacion"),
+			_reactivo(122, 6, "Un programador escribe «>» en lugar de «>=». Lo que queda en el código es:",
+				["Una falla", "Un defecto", "Una prueba", "Un requerimiento"], 1,
+				"La equivocación de la persona es el error; lo que queda mal en el código es el defecto.", "error_defecto_falla"),
+			_reactivo(123, 6, "Al usar la app, el total del carrito sale mal. Lo que observa el usuario es:",
+				["Un defecto", "Una falla", "Una inspección", "Un error de requerimientos"], 1,
+				"La falla es el comportamiento incorrecto que se ve al ejecutar un defecto.", "error_defecto_falla"),
+			_reactivo(124, 6, "Un campo acepta edades de 18 a 60. ¿Qué valores conviene probar según el análisis de valores límite?",
+				["20, 30, 40 y 50", "17, 18, 60 y 61", "Solo 18", "1, 2, 3 y 4"], 1,
+				"Los defectos suelen estar en los bordes: se prueba justo afuera y justo adentro de cada límite.", "valores_limite"),
+			_reactivo(125, 6, "Las particiones de equivalencia consisten en:",
+				["Probar solo los valores válidos", "Dividir el equipo en dos", "Agrupar entradas que se tratan igual y probar un valor de cada grupo", "Probar todos los valores posibles"], 2,
+				"Si el sistema trata igual a todos los valores de un grupo, basta con probar uno representativo.", "particiones"),
+			_reactivo(126, 6, "Las pruebas de caja blanca se diseñan:",
+				["Sin conocer el código", "Solo con el manual de usuario", "Únicamente por el cliente", "Conociendo el código interno"], 3,
+				"La caja blanca revisa caminos y condiciones del código; la caja negra solo entradas y salidas.", "caja_negra"),
+			_reactivo(127, 6, "Las pruebas beta las realizan:",
+				["Usuarios reales en su propio entorno, antes del lanzamiento", "Los diseñadores gráficos", "El compilador automáticamente", "Solo los programadores, en su computadora"], 0,
+				"Las pruebas alfa se hacen en el lugar del desarrollador; las beta, con usuarios reales en su entorno.", "aceptacion"),
+			_reactivo(128, 6, "En el desarrollo guiado por pruebas (TDD):",
+				["Las pruebas las escribe el cliente", "Primero se escribe el código y nunca se prueba", "Primero se escribe la prueba y después el código", "Solo se prueba al final del proyecto"], 2,
+				"TDD sigue el ciclo: prueba que falla → código que la pasa → refactorizar.", "tdd"),
+			_reactivo(129, 6, "¿Cuál afirmación sobre las pruebas es correcta?",
+				["Pueden mostrar que hay defectos, pero no que no exista ninguno", "Si pasan todas, el software no tiene errores", "Se puede probar cualquier programa con todas sus entradas", "Solo deben hacerse al final del proyecto"], 0,
+				"Probar todo es imposible: las pruebas muestran la presencia de defectos, no su ausencia.", "principios_prueba"),
+			_reactivo(130, 6, "Simular 10 000 usuarios conectados a la vez para ver cuándo falla el servidor es una prueba de:",
+				["Aceptación", "Unidad", "Usabilidad", "Estrés"], 3,
+				"La prueba de estrés lleva el sistema más allá de su carga esperada para ver cómo falla.", "pruebas_no_funcionales"),
+			# ---- Tema 7 · banco Sprint 3 ----
+			_reactivo(131, 7, "Un programa tiene dos «if» independientes, uno después del otro, sin anidar. ¿Cuál es su complejidad ciclomática?",
+				["2", "3", "1", "4"], 1,
+				"Complejidad ciclomática = número de decisiones + 1 = 2 + 1 = 3.", "ciclomatica"),
+			_reactivo(132, 7, "Un grafo de flujo tiene 9 aristas y 7 nodos. Con V(G) = E − N + 2, ¿cuál es su complejidad ciclomática?",
+				["18", "16", "4", "2"], 2,
+				"V(G) = 9 − 7 + 2 = 4 caminos independientes.", "ciclomatica"),
+			_reactivo(133, 7, "Un sistema de 15 000 líneas de código tiene 30 defectos. ¿Cuál es su densidad de defectos?",
+				["30 defectos por KLOC", "2 defectos por KLOC", "0.5 defectos por KLOC", "15 defectos por KLOC"], 1,
+				"15 000 líneas = 15 KLOC; 30 ÷ 15 = 2 defectos por cada mil líneas.", "densidad_defectos"),
+			_reactivo(134, 7, "Un equipo escribió 2 400 líneas de código con 3 meses-persona de esfuerzo. ¿Cuál fue su productividad?",
+				["2 400 líneas por mes-persona", "300 líneas por mes-persona", "800 líneas por mes-persona", "7 200 líneas por mes-persona"], 2,
+				"Productividad = tamaño ÷ esfuerzo = 2 400 ÷ 3 = 800.", "productividad"),
+			_reactivo(135, 7, "¿Por qué las líneas de código no sirven para comparar la productividad entre lenguajes distintos?",
+				["Porque solo miden la calidad", "Porque todos los lenguajes usan las mismas líneas", "Porque no se pueden contar", "La misma función requiere distinto número de líneas en cada lenguaje"], 3,
+				"Un lenguaje de alto nivel hace lo mismo en menos líneas; contar líneas castiga al más expresivo.", "loc"),
+			_reactivo(136, 7, "Al cierre de la semana, EV = 40 % y PV = 50 %. ¿Cuánto vale el SPI y qué significa?",
+				["0.8: el proyecto va atrasado", "1: el proyecto va en tiempo", "1.25: el proyecto va adelantado", "0.8: el proyecto va adelantado"], 0,
+				"SPI = EV ÷ PV = 40 ÷ 50 = 0.8; menor que 1 significa atraso.", "valor_ganado"),
+			_reactivo(137, 7, "El trabajo terminado vale 60 h según el plan (EV) y el equipo gastó 50 h reales (AC). ¿Cuánto vale el CPI?",
+				["1.2: se gastó menos de lo planeado", "1.2: se gastó más de lo planeado", "0.83: se gastó más de lo planeado", "10: el proyecto va en tiempo"], 0,
+				"CPI = EV ÷ AC = 60 ÷ 50 = 1.2; mayor que 1 significa que se gastó menos de lo planeado por lo que se hizo.", "valor_ganado"),
+			_reactivo(138, 7, "«Tiempo promedio que tarda el equipo en corregir un defecto» es una métrica de:",
+				["Proceso", "Usuario final", "Producto", "Hardware"], 0,
+				"Mide cómo trabaja el equipo (el proceso), no el software en sí.", "tipos_metricas"),
+			_reactivo(139, 7, "En el enfoque GQM, ¿qué se define primero?",
+				["La métrica más fácil de obtener", "La herramienta para medir", "La gráfica del reporte", "La meta que se quiere alcanzar"], 3,
+				"GQM = Goal, Question, Metric: primero la meta, luego las preguntas y al final las métricas.", "tipos_metricas"),
+			_reactivo(140, 7, "¿Qué estima el modelo COCOMO?",
+				["La cantidad de usuarios que tendrá la app", "El esfuerzo y la duración de un proyecto a partir de su tamaño", "El precio de venta del software", "La complejidad ciclomática de una función"], 1,
+				"COCOMO estima meses-persona y duración a partir de las KLOC estimadas.", "estimacion_esfuerzo"),
+			# ---- Tema 8 · banco Sprint 3 ----
+			_reactivo(141, 8, "¿Cuál es la función principal del Scrum Master?",
+				["Priorizar el Product Backlog", "Aprobar el presupuesto del cliente", "Facilitar el trabajo del equipo y ayudar a eliminar impedimentos", "Programar todas las historias"], 2,
+				"El Scrum Master sirve al equipo: facilita los eventos y quita obstáculos.", "product_owner"),
+			_reactivo(142, 8, "¿En qué evento el equipo muestra el incremento a los interesados para recibir retroalimentación?",
+				["Sprint Planning", "Daily Scrum", "Sprint Retrospective", "Sprint Review"], 3,
+				"En la Sprint Review se revisa el producto; en la Retrospective, la forma de trabajar.", "daily"),
+			_reactivo(143, 8, "¿En qué evento se decide qué se hará durante el sprint?",
+				["Sprint Retrospective", "Sprint Planning", "Sprint Review", "Daily Scrum"], 1,
+				"En el Sprint Planning el equipo elige qué elementos del backlog entran y cómo los hará.", "daily"),
+			_reactivo(144, 8, "La Definition of Done (DoD) es:",
+				["La fecha de entrega final", "El nombre del último sprint", "El acuerdo del equipo sobre qué debe cumplir algo para considerarse terminado", "La lista de errores pendientes"], 2,
+				"Si un elemento no cumple la DoD (por ejemplo, pruebas aprobadas), no está terminado.", "dod"),
+			_reactivo(145, 8, "El incremento en Scrum es:",
+				["El aumento de sueldo del equipo", "La suma de lo terminado en el sprint, en una versión utilizable", "El número de reuniones del sprint", "La cantidad de errores encontrados"], 1,
+				"El incremento es producto que funciona y cumple la DoD.", "dod"),
+			_reactivo(146, 8, "Planning Poker es una técnica para:",
+				["Estimar en equipo el esfuerzo de las historias", "Asignar sueldos", "Jugar durante la retrospectiva", "Decidir quién es el Scrum Master"], 0,
+				"Cada integrante muestra su estimación con una carta y se discuten las diferencias.", "estimacion_agil"),
+			_reactivo(147, 8, "Los puntos de historia miden:",
+				["Las horas exactas de trabajo", "El esfuerzo y la complejidad relativa de una historia", "La cantidad de usuarios", "El número de líneas de código"], 1,
+				"Son una medida relativa: una historia de 8 puntos cuesta más o menos el doble que una de 4.", "estimacion_agil"),
+			_reactivo(148, 8, "En tres sprints el equipo terminó 18, 22 y 20 puntos. ¿Cuál es su velocidad promedio?",
+				["20 puntos por sprint", "22 puntos por sprint", "18 puntos por sprint", "60 puntos por sprint"], 0,
+				"Velocidad = (18 + 22 + 20) ÷ 3 = 20 puntos por sprint.", "estimacion_agil"),
+			_reactivo(149, 8, "En una gráfica burndown, la línea real queda por encima de la ideal. Eso indica que:",
+				["No hay trabajo pendiente", "El equipo va adelantado", "El sprint ya terminó", "El equipo va atrasado"], 3,
+				"Por encima de la línea ideal = queda más trabajo del que debería a esa altura del sprint.", "burndown"),
+			_reactivo(150, 8, "En Kanban, ¿para qué sirve limitar el trabajo en curso (WIP)?",
+				["Para terminar tareas antes de empezar otras y evitar cuellos de botella", "Para que el equipo trabaje menos horas", "Para que no haya prioridades", "Para eliminar la columna «Hecho»"], 0,
+				"Con menos tareas a medias, el trabajo fluye y los bloqueos se ven rápido.", "kanban"),
+			# ---- Tema 9 · banco Sprint 3 ----
+			_reactivo(151, 9, "La verificación responde a la pregunta:",
+				["¿Cuánto cuesta el producto?", "¿Estamos construyendo el producto correctamente?", "¿Estamos construyendo el producto correcto?", "¿Quién usará el producto?"], 1,
+				"Verificar = comprobar contra la especificación.", "verif_valid"),
+			_reactivo(152, 9, "La validación responde a la pregunta:",
+				["¿Estamos construyendo el producto correctamente?", "¿En qué lenguaje se programa?", "¿Estamos construyendo el producto correcto?", "¿Cuántas líneas tiene el código?"], 2,
+				"Validar = comprobar que el producto sirve para lo que el usuario necesita.", "verif_valid"),
+			_reactivo(153, 9, "Mostrar el prototipo a los alumnos para ver si la app les ayuda a estudiar es una actividad de:",
+				["Refactorización", "Compilación", "Validación", "Verificación"], 2,
+				"Se comprueba contra la necesidad real del usuario: eso es validación.", "verif_valid"),
+			_reactivo(154, 9, "¿Qué norma define características de calidad del producto de software como usabilidad y mantenibilidad?",
+				["ISO/IEC 25010", "IEEE 802.11", "ISO/IEC 29110", "ISO 14001"], 0,
+				"ISO/IEC 25010 es el modelo de calidad del producto; ISO/IEC 29110 trata de procesos para equipos pequeños.", "iso25010"),
+			_reactivo(155, 9, "Que un usuario nuevo aprenda a usar la app sin ayuda es una característica de:",
+				["Portabilidad", "Eficiencia", "Mantenibilidad", "Usabilidad"], 3,
+				"La usabilidad es qué tan fácil es aprender y usar el sistema.", "iso25010"),
+			_reactivo(156, 9, "Que la app funcione en distintos modelos de celular Android se relaciona con:",
+				["Seguridad", "Portabilidad", "Adecuación funcional", "Usabilidad"], 1,
+				"La portabilidad es la facilidad para llevar el software a otros entornos.", "iso25010"),
+			_reactivo(157, 9, "Una app que no pierde el progreso aunque se cierre de golpe tiene buena:",
+				["Usabilidad", "Fiabilidad", "Portabilidad", "Compatibilidad"], 1,
+				"La fiabilidad incluye tolerar fallas y recuperarse sin perder datos.", "iso25010"),
+			_reactivo(158, 9, "Una inspección de código es:",
+				["Una revisión en grupo del código para encontrar defectos sin ejecutarlo", "Ejecutar el programa con muchos usuarios", "Medir cuánta batería usa la app", "Instalar la app en la tienda"], 0,
+				"Las inspecciones son revisiones estáticas: se lee el código buscando defectos.", "revisiones"),
+			_reactivo(159, 9, "El aseguramiento de la calidad (QA) se enfoca en:",
+				["Las ventas del producto", "El diseño del logotipo", "El proceso, para prevenir defectos", "Solo en ejecutar pruebas al final"], 2,
+				"QA define y vigila buenas prácticas para que los defectos no se produzcan.", "qa_qc"),
+			_reactivo(160, 9, "El control de calidad (QC) se enfoca en:",
+				["El proceso, para prevenir defectos", "El precio del software", "La contratación del equipo", "El producto, para detectar defectos"], 3,
+				"QC revisa y prueba el producto terminado o en construcción para encontrar defectos.", "qa_qc"),
+			# ---- Tema 10 · banco Sprint 3 ----
+			_reactivo(161, 10, "¿Para qué sirve un sistema de control de versiones?",
+				["Para registrar cada cambio del código y poder volver a versiones anteriores", "Para diseñar la interfaz", "Para enviar correos al cliente", "Para compilar el programa más rápido"], 0,
+				"Guarda el historial de cambios: quién cambió qué, cuándo y por qué.", "control_versiones"),
+			_reactivo(162, 10, "¿Cuál de estos es un sistema de control de versiones?",
+				["Excel", "Godot", "Android", "Git"], 3,
+				"Git es el sistema de control de versiones más usado; GitHub aloja repositorios de Git.", "control_versiones"),
+			_reactivo(163, 10, "Un commit es:",
+				["Un archivo que se borra", "Una instantánea de los cambios guardada en el historial con un mensaje", "Un error del compilador", "Una reunión del equipo"], 1,
+				"Cada commit queda en el historial y se puede consultar o recuperar después.", "commit_git"),
+			_reactivo(164, 10, "¿Cuál es el mejor mensaje de commit?",
+				["cambios", "ya quedó", "Agrega validación del alias de 3 a 20 caracteres", "asdf"], 2,
+				"Un buen mensaje dice qué cambió, para que cualquiera lo entienda sin abrir el código.", "commit_git"),
+			_reactivo(165, 10, "¿Para qué sirve crear una rama?",
+				["Para trabajar en una funcionalidad sin afectar la versión principal", "Para compilar el proyecto", "Para borrar el historial", "Para cambiar el lenguaje del proyecto"], 0,
+				"Cada funcionalidad puede desarrollarse en su rama y unirse a main cuando esté lista.", "ramas"),
+			_reactivo(166, 10, "Un conflicto de fusión ocurre cuando:",
+				["El repositorio no tiene archivos", "Dos ramas cambiaron las mismas líneas de un archivo de forma distinta", "Se crea una rama nueva", "Se hace un commit sin mensaje"], 1,
+				"Git no sabe qué versión conservar, así que una persona debe decidir.", "merge"),
+			_reactivo(167, 10, "¿Qué comando sube tus commits al repositorio remoto?",
+				["git status", "git push", "git init", "git pull"], 1,
+				"push sube tus cambios; pull trae los cambios de los demás.", "repo_remoto"),
+			_reactivo(168, 10, "¿Qué comando trae a tu computadora los cambios que subieron tus compañeros?",
+				["git add", "git commit", "git pull", "git push"], 2,
+				"git pull descarga y une los cambios del repositorio remoto con tu copia.", "repo_remoto"),
+			_reactivo(169, 10, "Un pull request sirve para:",
+				["Pedir que el equipo revise los cambios de una rama antes de integrarlos", "Crear un usuario en GitHub", "Borrar una rama remota", "Descargar Git"], 0,
+				"El pull request permite revisar y comentar el código antes de unirlo a main.", "repo_remoto"),
+			_reactivo(170, 10, "La gestión de configuración del software se encarga de:",
+				["Configurar el brillo de la pantalla", "Elegir los colores de la app", "Instalar el sistema operativo", "Controlar las versiones y los cambios de todo el proyecto, código y documentos"], 3,
+				"Controla qué versión de cada elemento forma parte de cada entrega.", "control_versiones"),
+			# ---- Tema 11 · banco Sprint 3 ----
+			_reactivo(171, 11, "La triple restricción de un proyecto está formada por:",
+				["Código, diseño y pruebas", "Cliente, equipo y profesor", "Requerimientos, UML y SRS", "Alcance, tiempo y costo"], 3,
+				"Alcance, tiempo y costo se equilibran entre sí; la calidad depende de ese equilibrio.", "triple_restriccion"),
+			_reactivo(172, 11, "El cliente pide más funciones sin mover la fecha ni el presupuesto. ¿Qué suele pasar?",
+				["El costo baja automáticamente", "Se arriesga la calidad o el equipo se sobrecarga", "El proyecto termina antes", "No pasa nada"], 1,
+				"Si crece el alcance, debe ajustarse el tiempo o el costo; si no, la calidad sufre.", "triple_restriccion"),
+			_reactivo(173, 11, "Un riesgo es:",
+				["Un problema que ya ocurrió", "Una tarea terminada", "Un requerimiento del cliente", "Un evento incierto que, si ocurre, afecta al proyecto"], 3,
+				"El riesgo todavía no pasa; si ya pasó, es un problema.", "riesgo"),
+			_reactivo(174, 11, "Para decidir qué riesgos atender primero se evalúan:",
+				["Su orden alfabético", "Su probabilidad y su impacto", "La fecha en que se anotaron", "Quién los escribió"], 1,
+				"Los riesgos con probabilidad e impacto altos se atienden primero.", "riesgo"),
+			_reactivo(175, 11, "Riesgo: un integrante podría enfermarse. Que dos personas conozcan cada módulo es una estrategia de:",
+				["Mitigación", "Evitación", "Transferencia", "Aceptación"], 0,
+				"Mitigar es reducir el impacto o la probabilidad del riesgo.", "estrategias_riesgo"),
+			_reactivo(176, 11, "Contratar un seguro o pasar una parte riesgosa a un proveedor externo es:",
+				["Transferir el riesgo", "Ignorar el riesgo", "Aceptar el riesgo", "Evitar el riesgo"], 0,
+				"Transferir pasa el impacto a otro, aunque el riesgo siga existiendo.", "estrategias_riesgo"),
+			_reactivo(177, 11, "Cambiar a una tecnología conocida para que un riesgo técnico ya no pueda ocurrir es:",
+				["Transferir el riesgo", "Mitigar el riesgo", "Aceptar el riesgo", "Evitar el riesgo"], 3,
+				"Evitar es cambiar el plan para eliminar la causa del riesgo.", "estrategias_riesgo"),
+			_reactivo(178, 11, "La estructura de desglose del trabajo (EDT/WBS) es:",
+				["El presupuesto del proyecto", "Un diagrama de clases", "La división del trabajo en partes cada vez más pequeñas y manejables", "La lista de integrantes del equipo"], 2,
+				"Se descompone el trabajo hasta llegar a tareas que se pueden estimar y asignar.", "wbs"),
+			_reactivo(179, 11, "Un hito (milestone) es:",
+				["Un punto de control importante, como el fin de un sprint", "Un error del sistema", "Una tarea que dura muchos días", "Un integrante del equipo"], 0,
+				"Un hito no tiene duración: marca un momento clave del proyecto.", "hitos"),
+			_reactivo(180, 11, "En un diagrama de Gantt, ¿qué representa la longitud de cada barra?",
+				["El costo de la tarea", "El número de personas", "La duración de la tarea", "La importancia de la tarea"], 2,
+				"Cada barra se extiende desde el inicio hasta el fin planeado de la tarea.", "hitos"),
+			# ---- Tema 12 · banco Sprint 3 ----
+			_reactivo(181, 12, "¿Qué organizaciones crearon el Código de Ética de la Ingeniería de Software?",
+				["La OTAN y la ONU", "Google y Microsoft", "La ISO y la UNESCO", "La ACM y la IEEE Computer Society"], 3,
+				"La ACM y la IEEE-CS publicaron juntas el código de ética y práctica profesional.", "codigo_etica"),
+			_reactivo(182, 12, "Según el código de ética, cuando hay un conflicto, el ingeniero debe actuar primero en interés de:",
+				["Su jefe", "El público", "Él mismo", "La empresa competidora"], 1,
+				"El primer principio pide actuar de acuerdo con el interés y el bienestar del público.", "codigo_etica"),
+			_reactivo(183, 12, "Un equipo entrega tarde y culpa a un compañero que no tuvo la culpa. ¿Qué principio viola?",
+				["El de cuidar la calidad del producto", "El de seguir aprendiendo", "Ninguno", "El de ser justo y apoyar a los colegas"], 3,
+				"El código pide ser justo con los colegas y reconocer el trabajo de cada uno.", "codigo_etica"),
+			_reactivo(184, 12, "Encuentras un defecto que pone en riesgo los datos de los usuarios y te piden no decir nada. Lo correcto es:",
+				["Borrar el código sin avisar", "Informarlo por los canales adecuados aunque retrase la entrega", "Publicarlo en redes sociales", "Callarlo para entregar a tiempo"], 1,
+				"Ocultar un defecto que daña a los usuarios va contra el interés público.", "honestidad"),
+			_reactivo(185, 12, "Te ofrecen un proyecto en una tecnología que no dominas. Lo ético es:",
+				["Aceptarlo sin mencionar nada", "Decirlo con claridad antes de aceptarlo", "Rechazar cualquier proyecto nuevo", "Copiar un proyecto ajeno"], 1,
+				"Un profesional es honesto sobre sus límites y solo promete lo que puede cumplir.", "honestidad"),
+			_reactivo(186, 12, "Una licencia de código abierto como MIT permite:",
+				["Usar, modificar y distribuir el código respetando sus condiciones", "Usarlo solo en computadoras de la universidad", "Usarlo sin ninguna condición", "Quitar el nombre del autor y venderlo como propio"], 0,
+				"Las licencias abiertas dan permisos amplios, pero con condiciones, como conservar el aviso de derechos de autor.", "licencias"),
+			_reactivo(187, 12, "Copiar código de internet a tu proyecto sin revisar su licencia puede:",
+				["Hacerlo de dominio público", "Mejorar automáticamente su calidad", "Violar los derechos de autor", "Eliminar sus defectos"], 2,
+				"El código publicado sigue teniendo autor; su licencia dice qué puedes hacer con él.", "licencias"),
+			_reactivo(188, 12, "Presentar código de otra persona como propio, sin darle crédito, es:",
+				["Refactorización", "Trabajo en equipo", "Plagio", "Reutilización correcta"], 2,
+				"Reutilizar está bien si se respeta la licencia y se da crédito; presentarlo como propio es plagio.", "licencias"),
+			_reactivo(189, 12, "Antes de guardar datos personales de los usuarios, la app debe:",
+				["Guardarlos sin avisar", "Publicarlos para que sean transparentes", "Informar para qué se usarán y pedir su consentimiento", "Venderlos a otras empresas"], 2,
+				"Los usuarios deben saber qué datos se recolectan, para qué, y aceptarlo.", "privacidad"),
+			_reactivo(190, 12, "¿Cuál es una buena práctica para guardar las contraseñas de los usuarios?",
+				["Guardarlas transformadas con una función hash", "Enviarlas por correo al administrador", "Guardarlas en texto plano", "Escribirlas en el código fuente"], 0,
+				"Con un hash, aunque alguien robe la base de datos, no ve las contraseñas originales.", "privacidad"),
 		],
 		"intentos_modulo": [],
-		"teoria_consultas": 0,
-		# ---- CU-04: conceptos de teoría (uno por tema; los reactivos apuntan por id_concepto) ----
+		# ---- Conceptos de teoría (CU-04) ----
 		"conceptos": [
 			_concepto("ing_software", 1, "¿Qué es la ingeniería de software?",
 				"La ingeniería de software es la aplicación de un enfoque sistemático, disciplinado y cuantificable al desarrollo, operación y mantenimiento del software. No se trata solo de programar: incluye planear, analizar, diseñar, probar y mantener.",
@@ -1217,219 +1661,397 @@ func _bd_inicial() -> Dictionary:
 				"Al final de cada sprint el equipo reflexiona: qué salió bien, qué salió mal y qué va a mejorar. Es el evento de mejora continua de Scrum.",
 				["Qué salió bien", "Qué mejorar", "Mejora continua"],
 				"Review = mejorar el producto; Retrospective = mejorar al equipo."),
-			# ---- Materia 2 · Proceso de Software en Equipo ----
-			_concepto("tsp", 9, "Team Software Process (TSP)",
-				"El TSP es un proceso para equipos pequeños y autodirigidos: el equipo planea su trabajo, mide su avance con datos (horas, tamaño, defectos) y mejora su proceso en cada ciclo. Se apoya en el PSP, la disciplina personal de cada integrante.",
-				["Equipo autodirigido", "Datos", "Ciclos", "PSP"],
-				"TSP = el equipo decide, mide y mejora; nadie lo hace por él."),
-			_concepto("roles_tsp", 9, "Roles del TSP",
-				"Cada integrante asume un rol además de desarrollar: líder de equipo (coordina y da seguimiento), gerente de desarrollo (diseño y producto), gerente de planeación (plan y valor ganado), gerente de calidad y proceso (estándares, inspecciones, defectos) y gerente de soporte (herramientas y configuración).",
-				["Líder", "Desarrollo", "Planeación", "Calidad", "Soporte"],
-				"Pregunta '¿quién cuida el plan?' → planeación; '¿quién cuida el proceso?' → calidad; '¿quién coordina?' → líder."),
-			_concepto("lanzamiento", 9, "El lanzamiento (launch)",
-				"Al inicio de cada ciclo el equipo se reúne para fijar metas, asignar roles, estimar las tareas, construir el calendario, evaluar riesgos y presentar el plan. Sin lanzamiento no hay plan compartido.",
-				["Metas", "Roles", "Estimación", "Calendario", "Riesgos"],
-				"Lanzamiento = planear juntos antes de empezar."),
-			_concepto("acuerdo_equipo", 9, "Acuerdo de equipo",
-				"El acuerdo de equipo (team agreement) es el documento firmado por todos con las reglas de trabajo: horarios, canales de comunicación, cómo se toman decisiones, responsabilidades de cada rol y qué pasa si alguien incumple.",
-				["Reglas", "Comunicación", "Decisiones", "Sanciones"],
-				"Es el 'contrato' interno del equipo."),
-			_concepto("horas_tarea", 10, "Horas de tarea y disponibilidad",
-				"Cada tarea del plan se estima en horas de tarea. La duración del proyecto resulta de dividir las horas totales entre las horas disponibles por semana del equipo (no todas las horas de la semana son horas de tarea).",
-				["Horas de tarea", "Disponibilidad semanal", "Calendario"],
-				"Semanas = horas del plan ÷ horas disponibles por semana."),
-			_concepto("valor_planeado", 10, "Valor planeado (PV)",
-				"El valor planeado de una tarea es el porcentaje del esfuerzo total del plan que representa: sus horas estimadas entre las horas totales por cien. Sumando el PV de las tareas de cada semana se obtiene el PV acumulado esperado.",
-				["Porcentaje del plan", "Horas estimadas", "Acumulado por semana"],
-				"PV responde: ¿qué tanto del proyecto debería estar hecho para esta fecha?"),
-			_concepto("probe", 10, "Estimación PROBE",
-				"PROBE (PROxy Based Estimating) estima el tamaño y el tiempo de una tarea nueva a partir de datos históricos de tareas parecidas. Mientras más datos propios tenga el equipo, mejores serán sus estimaciones.",
-				["Datos históricos", "Tareas similares", "Mejora con el tiempo"],
-				"Estimar sin datos es adivinar; PROBE usa lo que ya mediste."),
-			_concepto("gantt", 10, "Gantt y tablero de tareas",
-				"El diagrama de Gantt muestra las tareas contra el tiempo (cuándo empieza y termina cada una). El tablero de tareas muestra el estado actual: por hacer, en curso y hecho. Juntos permiten ver el calendario y el avance.",
-				["Tareas vs tiempo", "Estado actual", "Avance"],
-				"Gantt = cuándo; tablero = cómo va."),
-			_concepto("valor_ganado_tsp", 11, "Valor ganado (EV)",
-				"El valor ganado acumula el valor planeado de las tareas que ya están terminadas al 100 %. No hay crédito parcial: una tarea a medias no suma nada. Comparar EV con PV dice si el proyecto va en tiempo.",
-				["Tareas terminadas", "Sin crédito parcial", "EV vs PV"],
-				"EV < PV = retraso; EV = PV = en tiempo; EV > PV = adelantado."),
-			_concepto("spi_cpi", 11, "Índices SPI y CPI",
-				"SPI = EV / PV mide el desempeño en calendario (mayor que 1 es adelantado). CPI = EV / AC mide el desempeño en costo, usando las horas reales (AC): menor que 1 significa que cuesta más esfuerzo del planeado obtener el valor.",
-				["SPI calendario", "CPI costo", "1 es el punto de equilibrio"],
-				"S de schedule (tiempo), C de cost (horas reales)."),
-			# ---- Materia 3 · Arquitectura y Diseño de Software ----
-			_concepto("arquitectura", 12, "Arquitectura de software",
-				"La arquitectura es la estructura de alto nivel del sistema: sus componentes principales, cómo se relacionan y las decisiones difíciles de cambiar después. Se elige según los atributos de calidad que importan.",
-				["Componentes", "Relaciones", "Decisiones difíciles de cambiar"],
-				"Si cambiarlo después duele mucho, es arquitectura."),
-			_concepto("cliente_servidor", 12, "Cliente-servidor",
-				"Los clientes (apps, navegadores) hacen peticiones y un servidor centraliza los datos y la lógica para responderlas. Es el estilo de casi todas las aplicaciones web y móviles con backend.",
-				["Petición", "Respuesta", "Servidor central"],
-				"El cliente pregunta, el servidor contesta."),
-			_concepto("microservicios", 12, "Microservicios",
-				"La aplicación se divide en servicios pequeños e independientes, cada uno con su propia responsabilidad, base de datos y despliegue. Escalan por separado pero aumentan la complejidad de operación.",
-				["Servicios pequeños", "Independientes", "Despliegue separado"],
-				"Muchos servicios chicos en vez de uno grande."),
-			_concepto("monolito", 12, "Monolito",
-				"Toda la funcionalidad vive en una sola unidad que se construye y despliega junta. Es simple de empezar y probar, pero cuesta escalar partes por separado y un error puede tirar todo el sistema.",
-				["Una sola unidad", "Simple al inicio", "Difícil de escalar"],
-				"Monolito = una sola pieza."),
-			_concepto("atributos_calidad", 12, "Atributos de calidad",
-				"Los atributos de calidad (mantenibilidad, rendimiento, disponibilidad, seguridad, escalabilidad, usabilidad) son las cualidades que la arquitectura debe garantizar. Elegir una arquitectura es priorizar unos atributos sobre otros.",
-				["Mantenibilidad", "Rendimiento", "Disponibilidad", "Seguridad"],
-				"Mantenibilidad = qué tan fácil es cambiarlo."),
-			_concepto("patrones", 13, "Patrones de diseño",
-				"Un patrón de diseño es una solución probada y reutilizable a un problema de diseño que aparece una y otra vez. Tiene nombre, problema, solución y consecuencias; los popularizó el libro de la 'Banda de los Cuatro' (GoF).",
-				["Problema recurrente", "Solución probada", "Nombre común"],
-				"Un patrón es una receta con nombre; no es código que se copia."),
-			_concepto("observador", 13, "Patrón Observador",
-				"Un objeto (sujeto) mantiene una lista de observadores y les notifica automáticamente cuando cambia su estado. Desacopla a quien produce el cambio de quienes reaccionan a él. Las señales de Godot son un ejemplo.",
-				["Sujeto", "Observadores", "Notificación"],
-				"Si un cambio debe avisar a varios, usa Observador."),
-			_concepto("estrategia", 13, "Patrón Estrategia",
-				"Define una familia de algoritmos, encapsula cada uno en una clase con la misma interfaz y permite intercambiarlos en tiempo de ejecución sin cambiar al cliente que los usa.",
-				["Familia de algoritmos", "Misma interfaz", "Intercambiables"],
-				"Si tienes un 'switch' para elegir cómo calcular algo, probablemente quieres Estrategia."),
-			_concepto("fabrica", 13, "Patrón Fábrica",
-				"Centraliza la creación de objetos: el cliente pide un objeto a la fábrica y ésta decide qué clase concreta construir. Así el cliente no depende de las clases concretas.",
-				["Creación centralizada", "Clase concreta oculta", "Menos acoplamiento"],
-				"El cliente pide, la fábrica construye."),
-			_concepto("adaptador", 13, "Patrón Adaptador",
-				"Envuelve una clase con una interfaz incompatible para que funcione con la interfaz que el cliente espera, sin modificar ninguna de las dos. Es el 'convertidor de enchufe' del software.",
-				["Interfaz incompatible", "Envoltura", "Sin modificar"],
-				"Adaptador = convertidor de enchufe."),
-			_concepto("ocp", 14, "Principio abierto/cerrado",
-				"Las clases deben estar abiertas a la extensión y cerradas a la modificación: para agregar comportamiento se añade código nuevo (herencia, interfaces, composición) en lugar de modificar el que ya funciona y está probado.",
-				["Abierto a extensión", "Cerrado a modificación", "Agregar, no cambiar"],
-				"Si cada función nueva te obliga a editar un 'switch' viejo, violas OCP."),
-			_concepto("lsp", 14, "Sustitución de Liskov",
-				"Una subclase debe poder usarse donde se espera la clase base sin que el programa se rompa ni cambie su comportamiento esperado. Si al sustituir hay sorpresas, la herencia está mal planteada.",
-				["Sustituible", "Sin sorpresas", "Herencia correcta"],
-				"Si 'es un' pero no se comporta como tal, no debería heredar."),
-			_concepto("isp", 14, "Segregación de interfaces",
-				"Es mejor tener varias interfaces pequeñas y específicas que una gigante: ningún cliente debe verse obligado a implementar o depender de métodos que no usa.",
-				["Interfaces pequeñas", "Específicas", "Nada que no se use"],
-				"Si implementas métodos vacíos solo para cumplir la interfaz, violas ISP."),
-			_concepto("dip", 14, "Inversión de dependencias",
-				"Los módulos de alto nivel (lógica de negocio) no deben depender de los de bajo nivel (base de datos, red): ambos deben depender de abstracciones. Así se puede cambiar la implementación sin tocar la lógica.",
-				["Abstracciones", "Alto nivel", "Bajo nivel"],
-				"La lógica habla con una interfaz, nunca con MySQL directamente."),
+			# ---- Conceptos nuevos del banco Sprint 3 ----
+			_concepto("actividades_proceso", 1, "Actividades del proceso de software",
+				"Un proceso de software es el conjunto de actividades que llevan a producir un sistema. Todo proceso incluye cuatro actividades básicas: especificación (qué hará), desarrollo (construirlo), validación (comprobar que es lo que se pidió) y evolución (cambiarlo con el tiempo).",
+				["Especificación", "Desarrollo", "Validación", "Evolución"],
+				"Qué hacer → hacerlo → comprobarlo → cambiarlo."),
+			_concepto("algoritmo", 1, "Algoritmo",
+				"Un algoritmo es una serie finita y ordenada de pasos para resolver un problema. Casi siempre sigue el patrón entrada → proceso → salida.",
+				["Pasos ordenados", "Entrada", "Proceso", "Salida"],
+				"Si cambias el orden de los pasos, el resultado cambia."),
+			_concepto("atributos_software", 1, "Atributos del buen software",
+				"Un buen software es mantenible (se puede cambiar), confiable y seguro (no falla ni pone en riesgo datos), eficiente (no desperdicia memoria ni procesador) y aceptable (sus usuarios lo entienden y lo usan).",
+				["Mantenibilidad", "Confiabilidad", "Eficiencia", "Aceptabilidad"],
+				"Que se pueda cambiar, que no falle, que no desperdicie y que lo usen."),
+			_concepto("crisis_software", 1, "La crisis del software",
+				"En los años 60 y 70 muchos proyectos se entregaban tarde, costaban más de lo planeado y fallaban. Para resolverlo se propuso tratar el desarrollo de software como una ingeniería, con métodos y disciplina; el término se popularizó en una conferencia de la OTAN en 1968.",
+				["Retrasos", "Sobrecostos", "OTAN 1968"],
+				"Sin método, el software se sale de tiempo, de presupuesto y de calidad."),
+			_concepto("estructuras_control", 1, "Estructuras de control",
+				"Todo algoritmo se arma con tres estructuras: secuencial (un paso tras otro), condicional (elegir un camino según una condición: si…, entonces…) y repetitiva (repetir mientras se cumpla una condición).",
+				["Secuencial", "Condicional", "Repetitiva"],
+				"Hacer, decidir y repetir."),
+			_concepto("producto_software", 1, "Producto de software",
+				"El software no es solo el código: incluye la documentación, los datos de configuración y el soporte. Hay productos genéricos, que se venden a cualquier cliente, y productos a la medida, hechos para un cliente específico.",
+				["Código + documentación", "Genérico", "A la medida"],
+				"Genérico = para todos (como un procesador de textos); a la medida = para uno (como el sistema de una escuela)."),
+			_concepto("tipos_dato", 1, "Tipos de datos",
+				"Cada dato tiene un tipo que dice qué valores puede guardar: entero (19), decimal (8.7), texto («Ana») o booleano (verdadero o falso).",
+				["Entero", "Decimal", "Texto", "Booleano"],
+				"Pregúntate: ¿lleva punto?, ¿lleva letras?, ¿es sí o no?"),
+			_concepto("modelo_v", 2, "Modelo en V",
+				"Es una variante de la cascada en la que cada fase de desarrollo tiene un nivel de prueba asociado: los requerimientos se validan con pruebas de aceptación, el diseño del sistema con pruebas de sistema e integración, y el código con pruebas unitarias.",
+				["Desarrollo ↔ prueba", "Aceptación", "Unitarias"],
+				"El lado izquierdo de la V construye; el derecho prueba lo que se construyó en el mismo nivel."),
+			_concepto("historia_usuario", 3, "Historias de usuario",
+				"En los métodos ágiles los requerimientos se escriben como historias cortas desde el punto de vista del usuario: «Como (rol), quiero (acción), para (beneficio)». Cada historia lleva criterios de aceptación que dicen cuándo está cumplida.",
+				["Como…", "Quiero…", "Para…"],
+				"Quién lo pide, qué quiere y para qué le sirve."),
+			_concepto("priorizacion", 3, "Priorización MoSCoW",
+				"MoSCoW clasifica los requerimientos en Must (indispensable), Should (importante), Could (deseable si hay tiempo) y Won't (no se hará en esta entrega).",
+				["Must", "Should", "Could", "Won't"],
+				"Must = sin esto no se entrega."),
+			_concepto("req_usuario_sistema", 3, "Requerimientos de usuario y de sistema",
+				"Los requerimientos de usuario se escriben en lenguaje natural para que el cliente los entienda. Los requerimientos de sistema detallan con precisión qué hará el software y sirven a los desarrolladores.",
+				["Usuario: lenguaje natural", "Sistema: detalle técnico"],
+				"Usuario = para el cliente; sistema = para el equipo."),
+			_concepto("trazabilidad", 3, "Trazabilidad de requerimientos",
+				"Es poder seguir cada requerimiento hasta el diseño, el código y las pruebas que lo cubren, y al revés. Se registra en una matriz de trazabilidad; así se sabe qué afecta un cambio y si algo quedó sin probar.",
+				["Matriz de trazabilidad", "Requerimiento → prueba"],
+				"Si un requerimiento no tiene prueba, nadie sabe si se cumplió."),
+			_concepto("validacion_req", 3, "Validación de requerimientos",
+				"Consiste en comprobar que los requerimientos describen lo que el cliente realmente necesita. Se hace con revisiones junto al cliente y con prototipos. Corregir un requerimiento mal entendido al inicio es mucho más barato que corregirlo después de programar.",
+				["Revisión con el cliente", "Prototipos", "Costo del cambio"],
+				"Un error de requerimientos crece de precio en cada fase que avanza."),
+			_concepto("diag_despliegue", 4, "Diagrama de despliegue",
+				"Muestra los nodos físicos (celulares, servidores) donde se ejecuta el software y cómo se conectan entre sí.",
+				["Nodos", "Hardware", "Conexiones"],
+				"Despliegue = dónde corre cada parte."),
+			_concepto("diag_estados", 4, "Diagrama de estados",
+				"Muestra los estados por los que pasa un objeto durante su vida y los eventos que provocan cada cambio de estado (transiciones). Por ejemplo, un pedido pasa de creado a pagado, a enviado y a entregado.",
+				["Estados", "Transiciones", "Eventos"],
+				"Úsalo cuando algo «cambia de estado» con el tiempo."),
+			_concepto("include_extend", 4, "Relaciones «include» y «extend»",
+				"En un diagrama de casos de uso, «include» indica que un caso de uso siempre incorpora el comportamiento de otro (por ejemplo, «Pagar» incluye «Validar tarjeta»). «Extend» indica un comportamiento opcional que solo ocurre bajo cierta condición (por ejemplo, «Aplicar cupón»).",
+				["«include» = siempre", "«extend» = a veces"],
+				"Include es obligatorio; extend es opcional."),
+			_concepto("uml_tipos", 4, "Tipos de diagramas UML",
+				"UML (Lenguaje Unificado de Modelado) tiene diagramas estructurales, que muestran cómo está formado el sistema (clases, componentes, despliegue), y diagramas de comportamiento, que muestran qué hace (casos de uso, actividad, secuencia, estados).",
+				["Estructurales", "De comportamiento"],
+				"Estructura = de qué está hecho; comportamiento = qué hace."),
+			_concepto("abstraccion", 5, "Abstracción",
+				"Consiste en enfocarse en lo esencial de algo e ignorar los detalles que no importan en ese momento. Por ejemplo, para usar un método «enviarCorreo()» no necesitas saber cómo se conecta al servidor.",
+				["Lo esencial", "Ocultar detalles"],
+				"Piensa en el «qué», no en el «cómo»."),
+			_concepto("dry_kiss", 5, "Principios DRY y KISS",
+				"DRY («No te repitas») pide no duplicar la misma lógica en varios lugares, para que un cambio se haga una sola vez. KISS («Mantenlo simple») pide elegir la solución más sencilla que funcione.",
+				["DRY", "KISS"],
+				"Si copias y pegas código, probablemente estás rompiendo DRY."),
+			_concepto("modularidad", 5, "Modularidad",
+				"Es dividir el sistema en partes (módulos) con funciones bien definidas que se pueden construir, probar y cambiar por separado.",
+				["Módulos", "Independencia"],
+				"Divide y vencerás."),
+			_concepto("niveles_diseno", 5, "Diseño arquitectónico y diseño detallado",
+				"El diseño arquitectónico define los componentes principales del sistema y cómo se comunican. El diseño detallado define cómo funciona cada componente por dentro: sus clases, métodos y datos.",
+				["Arquitectónico", "Detallado"],
+				"Primero el plano de la casa, luego cada cuarto."),
+			_concepto("ocultamiento", 5, "Encapsulamiento y ocultamiento de información",
+				"Cada módulo esconde sus datos y su forma de trabajar, y solo expone una interfaz para usarlo. Así, si cambia por dentro, los demás módulos no se ven afectados.",
+				["Interfaz pública", "Datos privados"],
+				"Los demás usan los botones, no abren la caja."),
+			_concepto("refactorizacion", 5, "Refactorización",
+				"Es mejorar la estructura interna del código (nombres, duplicación, tamaño de las clases) sin cambiar lo que hace. Se apoya en pruebas para confirmar que el comportamiento sigue igual.",
+				["Misma funcionalidad", "Mejor estructura"],
+				"Refactorizar = ordenar el código, no agregar funciones."),
+			_concepto("error_defecto_falla", 6, "Error, defecto y falla",
+				"Un error es la equivocación de una persona; produce un defecto (bug) en el código o en un documento; cuando ese defecto se ejecuta, causa una falla, que es el comportamiento incorrecto que ve el usuario.",
+				["Error (persona)", "Defecto (código)", "Falla (ejecución)"],
+				"La persona se equivoca, el código queda mal, el programa falla."),
+			_concepto("particiones", 6, "Particiones de equivalencia",
+				"Las entradas se dividen en grupos que el sistema debe tratar igual (por ejemplo, edades válidas y edades inválidas) y se prueba un valor representativo de cada grupo, en lugar de probar todos los valores.",
+				["Grupos de entradas", "Un valor por grupo"],
+				"Si dos valores se tratan igual, basta con probar uno."),
+			_concepto("principios_prueba", 6, "Principios de las pruebas",
+				"Las pruebas pueden mostrar que hay defectos, pero no demostrar que no existe ninguno. Probar todo es imposible, por eso se eligen los casos con más probabilidad de encontrar defectos, y conviene empezar a probar desde temprano.",
+				["Presencia, no ausencia", "Probar todo es imposible", "Probar temprano"],
+				"Pasar todas las pruebas no significa cero errores."),
+			_concepto("pruebas_no_funcionales", 6, "Pruebas de rendimiento y estrés",
+				"Comprueban cualidades del sistema, no sus funciones. Las de rendimiento miden tiempos de respuesta con la carga normal; las de estrés llevan el sistema más allá de su carga esperada para ver cómo y cuándo falla.",
+				["Rendimiento", "Estrés", "Carga"],
+				"Estrés = empujar el sistema hasta que se rompa."),
+			_concepto("tdd", 6, "Desarrollo guiado por pruebas (TDD)",
+				"En TDD primero se escribe una prueba que falla, luego el código mínimo para que pase, y al final se refactoriza. Se repite en ciclos cortos: rojo, verde, refactorizar.",
+				["Rojo", "Verde", "Refactorizar"],
+				"La prueba va antes que el código."),
+			_concepto("valores_limite", 6, "Análisis de valores límite",
+				"Los defectos suelen aparecer en los bordes de los rangos. Si un campo acepta de 1 a 100, conviene probar 0, 1, 100 y 101: justo afuera y justo adentro de cada límite.",
+				["Bordes del rango", "Justo adentro", "Justo afuera"],
+				"Prueba el límite y su vecino de cada lado."),
+			_concepto("estimacion_esfuerzo", 7, "Estimación de esfuerzo: COCOMO",
+				"COCOMO es un modelo que estima el esfuerzo (en meses-persona) y la duración de un proyecto a partir de su tamaño en miles de líneas de código (KLOC), ajustado por factores del equipo y del producto.",
+				["Tamaño (KLOC)", "Esfuerzo", "Duración"],
+				"Más tamaño → más esfuerzo, y crece más rápido que el tamaño."),
+			_concepto("productividad", 7, "Productividad",
+				"Relaciona lo producido con el esfuerzo invertido, por ejemplo líneas de código o puntos de función por mes-persona. Sirve para estimar, pero no para comparar equipos que usan lenguajes distintos.",
+				["Tamaño / esfuerzo", "Mes-persona"],
+				"Productividad = cuánto se hizo ÷ cuánto esfuerzo costó."),
+			_concepto("tipos_metricas", 7, "Métricas de producto, proceso y proyecto; GQM",
+				"Las métricas de producto miden el software (tamaño, complejidad, defectos); las de proceso miden cómo se trabaja (tiempo para corregir un defecto, defectos encontrados en revisiones); las de proyecto miden avance, costo y calendario. El enfoque GQM (Meta-Pregunta-Métrica) define primero la meta, luego las preguntas y al final qué medir.",
+				["Producto", "Proceso", "Proyecto", "GQM"],
+				"No midas por medir: primero la meta, luego la métrica."),
+			_concepto("burndown", 8, "Gráfica burndown",
+				"Muestra cuánto trabajo falta por hacer en cada día del sprint. Si la línea real queda por encima de la ideal, el equipo va atrasado.",
+				["Trabajo restante", "Línea ideal"],
+				"Arriba de la línea ideal = atraso."),
+			_concepto("dod", 8, "Definition of Done e incremento",
+				"La Definition of Done (DoD) es el acuerdo del equipo sobre qué debe cumplir un elemento para considerarse terminado (por ejemplo: código revisado, pruebas aprobadas, documentado). Lo terminado en el sprint forma el incremento, una versión utilizable del producto.",
+				["Terminado = cumple la DoD", "Incremento utilizable"],
+				"Si no cumple la DoD, no está terminado, aunque «ya casi»."),
+			_concepto("estimacion_agil", 8, "Estimación ágil: puntos de historia y velocidad",
+				"Los puntos de historia miden el esfuerzo y la complejidad relativa de una historia, no horas exactas. Se estiman en equipo, por ejemplo con Planning Poker. La velocidad es el promedio de puntos que el equipo termina por sprint y sirve para planear los siguientes.",
+				["Puntos de historia", "Planning Poker", "Velocidad"],
+				"Velocidad = puntos terminados por sprint, en promedio."),
+			_concepto("iso25010", 9, "Modelo de calidad ISO/IEC 25010",
+				"Define las características de calidad de un producto de software, entre ellas: adecuación funcional, eficiencia de desempeño, compatibilidad, usabilidad, fiabilidad, seguridad, mantenibilidad y portabilidad.",
+				["Usabilidad", "Fiabilidad", "Mantenibilidad", "Portabilidad"],
+				"Cada RNF de un SRS suele caer en una de estas características."),
+			_concepto("qa_qc", 9, "Aseguramiento y control de calidad",
+				"El aseguramiento de la calidad (QA) se enfoca en el proceso: definir y seguir buenas prácticas para prevenir defectos. El control de calidad (QC) se enfoca en el producto: revisarlo y probarlo para detectar defectos.",
+				["QA = proceso, prevenir", "QC = producto, detectar"],
+				"QA evita que el defecto nazca; QC lo encuentra si nació."),
+			_concepto("revisiones", 9, "Revisiones e inspecciones",
+				"Son lecturas en grupo de un artefacto (requerimientos, diseño o código) para encontrar defectos sin ejecutarlo. Detectan errores temprano, cuando corregirlos cuesta menos que en pruebas o en producción.",
+				["Sin ejecutar", "En equipo", "Temprano"],
+				"Lo que se encuentra en una revisión ya no llega al usuario."),
+			_concepto("verif_valid", 9, "Verificación y validación",
+				"La verificación revisa que el producto cumpla su especificación: «¿estamos construyendo el producto correctamente?». La validación revisa que el producto sirva a lo que el usuario necesita: «¿estamos construyendo el producto correcto?».",
+				["Verificación = según la especificación", "Validación = según el usuario"],
+				"Verificar contra el documento; validar contra el cliente."),
+			_concepto("commit_git", 10, "Commits",
+				"Un commit guarda en el historial una instantánea de los cambios, con un mensaje que explica qué se hizo. Un buen mensaje es corto y específico, por ejemplo «Agrega validación del alias».",
+				["Instantánea", "Mensaje claro"],
+				"El mensaje responde: ¿qué cambió y por qué?"),
+			_concepto("control_versiones", 10, "Control de versiones y gestión de configuración",
+				"Un sistema de control de versiones, como Git, registra cada cambio de los archivos, quién lo hizo y cuándo, y permite volver a versiones anteriores. La gestión de configuración aplica ese control a todo el proyecto: código, documentos y versiones entregadas.",
+				["Historial", "Volver atrás", "Git"],
+				"Sin control de versiones, «final_final_v3.zip» es tu historial."),
+			_concepto("merge", 10, "Fusión (merge) y conflictos",
+				"Fusionar une los cambios de una rama con otra. Hay conflicto cuando dos ramas cambiaron las mismas líneas de forma distinta; una persona debe decidir qué versión queda.",
+				["Fusionar", "Conflicto", "Resolver a mano"],
+				"Mismo archivo, mismas líneas, cambios distintos = conflicto."),
+			_concepto("ramas", 10, "Ramas",
+				"Una rama es una línea de trabajo separada. Permite desarrollar una funcionalidad sin afectar la versión principal (main) hasta que esté lista para integrarse.",
+				["main", "feature/…", "Trabajo aislado"],
+				"Una rama por funcionalidad, como feature/CU-01-perfil."),
+			_concepto("repo_remoto", 10, "Repositorio remoto y pull request",
+				"El repositorio remoto (por ejemplo, en GitHub) es la copia compartida del equipo. «git push» sube tus commits y «git pull» trae los de los demás. Un pull request pide que el equipo revise los cambios de una rama antes de integrarlos.",
+				["push = subir", "pull = traer", "Pull request = revisión"],
+				"Push empuja hacia afuera; pull jala hacia ti."),
+			_concepto("estrategias_riesgo", 11, "Estrategias ante los riesgos",
+				"Evitar: cambiar el plan para que el riesgo no pueda ocurrir. Mitigar: reducir su probabilidad o su impacto. Transferir: pasarlo a otro, por ejemplo con un seguro o un proveedor. Aceptar: asumirlo y tener un plan B por si ocurre.",
+				["Evitar", "Mitigar", "Transferir", "Aceptar"],
+				"Quitarlo, achicarlo, pasarlo o asumirlo."),
+			_concepto("hitos", 11, "Hitos y diagrama de Gantt",
+				"Un hito es un punto de control importante sin duración, como el fin de un sprint o una entrega. El diagrama de Gantt muestra las tareas como barras en el tiempo: la longitud de cada barra es su duración.",
+				["Hito = punto de control", "Barra = duración"],
+				"Los hitos marcan fechas; las barras, trabajo."),
+			_concepto("riesgo", 11, "Riesgos",
+				"Un riesgo es un evento incierto que, si ocurre, afecta al proyecto. Se evalúa por su probabilidad y su impacto, y se atienden primero los que tienen ambos altos.",
+				["Probabilidad", "Impacto", "Prioridad"],
+				"Riesgo = algo que todavía no pasa, pero podría."),
+			_concepto("triple_restriccion", 11, "Triple restricción",
+				"Todo proyecto se equilibra entre alcance (qué se entrega), tiempo y costo. Si uno cambia, al menos otro tiene que ajustarse; si no, la que sufre es la calidad.",
+				["Alcance", "Tiempo", "Costo"],
+				"Más alcance sin más tiempo ni costo = menos calidad."),
+			_concepto("wbs", 11, "Estructura de desglose del trabajo (EDT/WBS)",
+				"Divide todo el trabajo del proyecto en partes cada vez más pequeñas, hasta llegar a tareas que se pueden estimar, asignar y controlar.",
+				["Descomponer", "Tareas manejables"],
+				"Si una tarea no se puede estimar, divídela más."),
+			_concepto("codigo_etica", 12, "Código de ética de la ingeniería de software",
+				"La ACM y la IEEE Computer Society publicaron un código de ética con ocho principios: actuar en interés del público, del cliente y el empleador, cuidar la calidad del producto, mantener un juicio independiente, gestionar con ética, cuidar la profesión, apoyar a los colegas y seguir aprendiendo.",
+				["ACM / IEEE-CS", "Interés público primero", "8 principios"],
+				"Cuando hay conflicto, el bienestar del público va primero."),
+			_concepto("honestidad", 12, "Honestidad y competencia profesional",
+				"Un ingeniero informa a tiempo los retrasos y los defectos que conoce, aunque sean malas noticias, y solo acepta trabajos para los que tiene la competencia, o lo dice con claridad.",
+				["Informar defectos", "Reconocer límites"],
+				"Ocultar un problema no lo resuelve, lo agranda."),
+			_concepto("licencias", 12, "Licencias y propiedad intelectual",
+				"El código tiene autor y licencia. Las licencias de código abierto, como MIT o GPL, permiten usarlo y modificarlo bajo ciertas condiciones. Usar código ajeno sin respetar su licencia, o presentarlo como propio, viola los derechos de autor y es plagio.",
+				["Licencia", "Derechos de autor", "Dar crédito"],
+				"Antes de copiar, revisa la licencia y da crédito."),
+			_concepto("privacidad", 12, "Privacidad y protección de datos",
+				"Una app debe informar qué datos personales recolecta y para qué, pedir consentimiento, guardar solo lo necesario y protegerlo; por ejemplo, las contraseñas se guardan transformadas con una función hash, nunca en texto plano.",
+				["Consentimiento", "Datos mínimos", "Hash"],
+				"Si no lo necesitas, no lo pidas; si lo guardas, protégelo."),
 		],
-		# ---- CU-05: catálogo de insignias (la condición se evalúa en evaluar_insignias) ----
 		"insignias": [
 			_insignia("primer_paso", "Primer paso", "Diste el primer paso en tu formación como ingeniero de software.", "Completa tu primer módulo con al menos 70 %.", "estrella", "#2F55E6"),
 			_insignia("punteria", "Puntería", "Reconoce la precisión: resolviste un reto completo sin fallar una sola pregunta.", "Acierta todas las preguntas de un reto (100 % en un solo intento).", "check", "#178A4C"),
 			_insignia("armador", "Armador", "Armaste un puzzle completo sin errores.", "Completa un módulo tipo puzzle con 100 %.", "puzzle", "#7C3AED"),
 			_insignia("estudioso", "Estudioso", "Repasar la teoría es de ingenieros: consultaste los conceptos varias veces.", "Consulta la teoría 5 veces desde un reto.", "libro", "#0E7490"),
-			_insignia("racha", "Racha", "Tres módulos seguidos completados sin dejar huecos en el mapa.", "Completa los módulos 1, 2 y 3 de forma consecutiva.", "play", "#C2410C"),
+			_insignia("racha", "Racha", "Un tema completo: Quiz I, Quiz II y Puzzle sin dejar huecos en el mapa.", "Completa los tres módulos de un mismo tema.", "play", "#C2410C"),
 			_insignia("constante", "Constante", "La práctica hace al ingeniero: acumulaste diez intentos.", "Termina 10 retos (cuentan todos los intentos).", "reiniciar", "#D97706"),
-			_insignia("analista", "Analista", "Dominas los requerimientos funcionales y no funcionales.", "Completa el módulo 3 · Requerimientos de software.", "quiz", "#2F55E6"),
-			_insignia("ingeniero", "Ingeniero", "Recorriste todos los mapas: completaste los módulos de todas las materias.", "Completa todos los módulos de todas las materias con al menos 70 %.", "mapa", "#B45309"),
+			_insignia("analista", "Analista", "Dominas los requerimientos funcionales y no funcionales.", "Completa los tres módulos del tema Requerimientos de software.", "quiz", "#2F55E6"),
+			_insignia("ingeniero", "Ingeniero", "Recorriste todos los mapas: completaste los módulos de los 12 temas.", "Completa todos los módulos de todos los temas con al menos 70 %.", "mapa", "#B45309"),
 			_insignia("perfeccionista", "Perfeccionista", "Nada se te escapó: 100 % en todos los módulos.", "Alcanza 100 % como mejor puntaje en todos los módulos.", "estrella", "#14633A"),
 			# Sprint 3
 			_insignia("repasador", "Repasador", "Corregiste todos tus errores: la lista de repaso quedó vacía.", "Deja en cero la lista de Repasar mis errores.", "reiniciar", "#0E7490"),
 			_insignia("sin_pistas", "Sin ayuda", "Completaste un módulo sin pedir ninguna pista.", "Completa un módulo (≥ 70 %) sin usar pistas.", "ojo", "#7C3AED"),
-			_insignia("dominio", "Dominio", "Resolviste la práctica de ingeniero y dominaste una materia.", "Aprueba (≥ 70 %) la práctica de ingeniero de una materia.", "puzzle", "#C2410C"),
+			_insignia("dominio", "Dominio", "Resolviste la práctica de ingeniero y dominaste un tema.", "Aprueba (≥ 70 %) la práctica de ingeniero de un tema.", "puzzle", "#C2410C"),
 		],
 		# ---- CU-09: preguntas falladas pendientes de repaso ----
 		"errores": [],
-		# ---- CU-11: una práctica de ingeniero por materia (escenario + ejercicios de manipulación) ----
+		# ---- Ejercicios de manipulación por tema (módulo Puzzle y práctica de ingeniero, CU-11) ----
+		"puzzles": [
+			# ---- Tema 1 ----
+			_pz(1, _ej_ordenar("Ordena los pasos del algoritmo para calcular el promedio de tres calificaciones.", [
+				"Leer las tres calificaciones", "Sumar las tres calificaciones", "Dividir la suma entre 3", "Mostrar el promedio"],
+				"Primero se obtienen los datos (entrada), luego se procesan (suma y división) y al final se muestra el resultado (salida).", "algoritmo")),
+			_pz(1, _ej_clasificar("¿Qué estructura de control describe cada instrucción?", ["Secuencial", "Condicional", "Repetitiva"], [
+				["Leer dos números y mostrar su suma", "Secuencial"], ["Si la calificación es ≥ 70, aprobar; si no, reprobar", "Condicional"], ["Mientras haya alumnos en la lista, tomar asistencia", "Repetitiva"], ["Encender la computadora, abrir el navegador y entrar al sitio", "Secuencial"], ["Si llueve, llevar paraguas", "Condicional"], ["Pedir la contraseña hasta que sea correcta", "Repetitiva"]],
+				"Secuencial = un paso tras otro; condicional = se elige un camino según una condición; repetitiva = se repite mientras se cumple una condición.", "estructuras_control")),
+			_pz(1, _ej_ordenar("Ordena el pseudocódigo que indica si un número es par o impar.", [
+				"Inicio", "Leer el número", "Calcular el residuo de dividir el número entre 2", "Si el residuo es 0, mostrar «par»; si no, mostrar «impar»", "Fin"],
+				"Un número es par si al dividirlo entre 2 el residuo es 0; la decisión se toma después de calcular el residuo.", "estructuras_control")),
+			_pz(1, _ej_clasificar("¿Qué tipo de dato conviene para guardar cada valor?", ["Entero", "Decimal", "Texto", "Booleano"], [
+				["Edad: 19", "Entero"], ["Promedio: 8.7", "Decimal"], ["Nombre: «Ana»", "Texto"], ["¿Está inscrito?: verdadero", "Booleano"], ["Número de módulos: 12", "Entero"], ["Precio: 25.50", "Decimal"]],
+				"Entero = números sin punto; decimal = con punto; texto = letras y símbolos; booleano = solo verdadero o falso.", "tipos_dato")),
+			_pz(1, _ej_clasificar("Sigue el pseudocódigo y clasifica cada afirmación: x ← 4; mientras x > 0: x ← x − 2", ["Verdadero", "Falso"], [
+				["El ciclo se repite 2 veces", "Verdadero"], ["Al final, x vale 0", "Verdadero"], ["El ciclo nunca termina", "Falso"], ["En algún momento x vale 2", "Verdadero"], ["Al final, x vale −2", "Falso"]],
+				"x pasa de 4 a 2 (primera vuelta) y de 2 a 0 (segunda); como 0 > 0 es falso, el ciclo termina con x = 0.", "estructuras_control")),
+			_pz(1, _ej_clasificar("¿Qué atributo del buen software pide cada frase del cliente?", ["Mantenibilidad", "Confiabilidad", "Eficiencia", "Aceptabilidad"], [
+				["«Que podamos agregar temas sin reescribir todo»", "Mantenibilidad"], ["«Que no se trabe ni pierda mi progreso»", "Confiabilidad"], ["«Que no se acabe la batería del celular»", "Eficiencia"], ["«Que los alumnos lo entiendan sin manual»", "Aceptabilidad"], ["«Que no desperdicie memoria»", "Eficiencia"], ["«Que sea fácil cambiarlo el próximo semestre»", "Mantenibilidad"]],
+				"Cambiar fácil = mantenible; no fallar = confiable; no desperdiciar recursos = eficiente; que lo entiendan y usen = aceptable.", "atributos_software")),
+			# ---- Tema 2 ----
+			_pz(2, _ej_clasificar("¿Qué modelo de ciclo de vida conviene en cada situación?", ["Cascada", "Prototipado", "Espiral", "Scrum"], [
+				["Requerimientos claros y estables, por ejemplo un sistema de nómina conocido", "Cascada"], ["El cliente no sabe qué quiere hasta ver algo", "Prototipado"], ["Proyecto grande con mucho riesgo técnico", "Espiral"], ["Requerimientos que cambian y entregas cada dos semanas", "Scrum"], ["Se necesita probar ideas de interfaz con usuarios antes de construir", "Prototipado"], ["Sistema crítico donde cada vuelta empieza analizando riesgos", "Espiral"]],
+				"Estable → cascada; incierto para el cliente → prototipado; riesgoso → espiral; cambiante con entregas frecuentes → Scrum.", "cascada")),
+			_pz(2, _ej_ordenar("Ordena las fases del modelo en cascada, de la primera a la última.", [
+				"Análisis de requerimientos", "Diseño", "Implementación", "Pruebas", "Mantenimiento"],
+				"No puedes probar lo que no has programado ni programar lo que no has diseñado.", "cascada")),
+			_pz(2, _ej_ordenar("Ordena los pasos de una vuelta del modelo en espiral.", [
+				"Definir objetivos y alternativas", "Analizar y resolver los riesgos", "Desarrollar y probar el incremento", "Planear la siguiente vuelta"],
+				"Cada vuelta de la espiral empieza por los objetivos, ataca los riesgos, construye y planea la siguiente.", "espiral")),
+			# ---- Tema 3 ----
+			_pz(3, _ej_clasificar("¿Es un requerimiento verificable o ambiguo?", ["Verificable", "Ambiguo"], [
+				["El registro se completa en máximo 3 pantallas", "Verificable"], ["El sistema será fácil de usar", "Ambiguo"], ["La búsqueda responde en menos de 2 segundos", "Verificable"], ["La app será rápida", "Ambiguo"], ["Las contraseñas tienen al menos 8 caracteres", "Verificable"], ["El sistema tendrá buena seguridad", "Ambiguo"]],
+				"Un requerimiento verificable tiene un criterio medible; «fácil», «rápida» o «buena» no se pueden probar.", "verificabilidad")),
+			_pz(3, _ej_ordenar("Ordena las actividades de la ingeniería de requerimientos.", [
+				"Elicitación", "Análisis", "Especificación", "Validación"],
+				"Primero se obtienen los requerimientos, luego se analizan, se escriben en el SRS y al final se validan con el cliente.", "elicitacion")),
+			_pz(3, _ej_clasificar("Clasifica cada requerimiento del cliente de una biblioteca escolar.", ["Funcional", "No funcional"], [
+				["Registrar el préstamo de un libro", "Funcional"], ["Responder en menos de 2 segundos", "No funcional"], ["Enviar recordatorio de devolución", "Funcional"], ["Funcionar sin conexión a internet", "No funcional"], ["Cifrar las contraseñas de los usuarios", "No funcional"], ["Generar el reporte mensual de préstamos", "Funcional"]],
+				"Funcional = una acción que el sistema hace; no funcional = una cualidad o límite (tiempo, seguridad, disponibilidad).", "req_no_funcional")),
+			_pz(3, _ej_clasificar("Prioriza con MoSCoW las historias de la app de la biblioteca.", ["Must", "Should", "Could", "Won't"], [
+				["Registrar préstamos y devoluciones", "Must"], ["Enviar recordatorio de devolución por correo", "Should"], ["Modo oscuro", "Could"], ["Vender libros en línea", "Won't"], ["Buscar un libro por título", "Must"], ["Estadísticas con gráficas", "Could"]],
+				"Must = sin esto no se entrega; Should = importante pero no bloquea; Could = si sobra tiempo; Won't = fuera de esta versión.", "priorizacion")),
+			# ---- Tema 4 ----
+			_pz(4, _ej_clasificar("¿Qué diagrama UML usarías para cada necesidad?", ["Casos de uso", "Clases", "Secuencia", "Actividad"], [
+				["Mostrar qué puede hacer cada tipo de usuario", "Casos de uso"], ["Mostrar los atributos y métodos de Pedido", "Clases"], ["Mostrar el orden de los mensajes al pagar", "Secuencia"], ["Mostrar el proceso de inscripción con sus decisiones", "Actividad"], ["Mostrar la herencia entre Usuario y Administrador", "Clases"], ["Mostrar paso a paso cómo responde el servidor al iniciar sesión", "Secuencia"]],
+				"Quién hace qué → casos de uso; estructura → clases; mensajes en el tiempo → secuencia; flujo con decisiones → actividad.", "uml_tipos")),
+			_pz(4, _ej_construir("Control escolar: los alumnos se inscriben y consultan calificaciones; los profesores capturan calificaciones. Coloca cada elemento en el diagrama.", ["Actor", "Caso de uso"], [
+				["Alumno", "Actor"], ["Inscribirse a materias", "Caso de uso"], ["Profesor", "Actor"], ["Capturar calificaciones", "Caso de uso"], ["Consultar calificaciones", "Caso de uso"], ["Sistema de pagos del banco", "Actor"]],
+				"Los actores son personas o sistemas externos (como el banco); los casos de uso son lo que el sistema les ofrece.", "casos_uso")),
+			_pz(4, _ej_construir("Biblioteca escolar: arma el diagrama de casos de uso colocando cada elemento donde va.", ["Actor", "Caso de uso"], [
+				["Bibliotecario", "Actor"], ["Prestar libro", "Caso de uso"], ["Alumno", "Actor"], ["Devolver libro", "Caso de uso"], ["Consultar catálogo", "Caso de uso"], ["Sistema de correo", "Actor"]],
+				"Los actores son personas o sistemas externos; los casos de uso son las funciones que el sistema les ofrece.", "casos_uso")),
+			_pz(4, _ej_clasificar("En un diagrama de casos de uso, ¿la relación es «include» o «extend»?", ["include", "extend"], [
+				["Pagar siempre requiere Iniciar sesión", "include"], ["Al pagar, a veces se aplica un cupón", "extend"], ["Reservar libro siempre valida la disponibilidad", "include"], ["Al registrarse, opcionalmente se sube una foto", "extend"], ["Enviar pedido siempre calcula el envío", "include"], ["Al consultar calificaciones, a veces se descarga el PDF", "extend"]],
+				"Include = el caso base siempre lo ejecuta; extend = solo en algunas condiciones.", "include_extend")),
+			# ---- Tema 5 ----
+			_pz(5, _ej_clasificar("En una app con MVC, ¿a qué parte pertenece cada responsabilidad?", ["Modelo", "Vista", "Controlador"], [
+				["Guardar las calificaciones en la base de datos", "Modelo"], ["Mostrar la tabla de calificaciones", "Vista"], ["Recibir el clic en «Guardar» y decidir qué hacer", "Controlador"], ["Validar que la calificación esté entre 0 y 10", "Modelo"], ["Pintar el mensaje de error en rojo", "Vista"], ["Pedir los datos al modelo y elegir qué pantalla mostrar", "Controlador"]],
+				"Modelo = datos y reglas; vista = lo que se ve; controlador = recibe acciones y coordina.", "mvc")),
+			_pz(5, _ej_clasificar("¿Es una decisión de buen diseño o de mal diseño?", ["Buen diseño", "Mal diseño"], [
+				["Dos módulos que se comunican solo por una interfaz", "Buen diseño"], ["Copiar la función de validación en cinco pantallas", "Mal diseño"], ["Un módulo que hace una sola cosa", "Buen diseño"], ["La vista consulta directamente la base de datos", "Mal diseño"], ["Elegir la solución más simple que funciona", "Buen diseño"], ["Una clase de 3 000 líneas que hace de todo", "Mal diseño"]],
+				"Bajo acoplamiento, alta cohesión, DRY y KISS son buen diseño; duplicar código, saltarse capas y clases gigantes son mal diseño.", "dry_kiss")),
+			_pz(5, _ej_ordenar("Ordena los niveles del diseño, del más general al más detallado.", [
+				"Diseño arquitectónico: componentes y cómo se comunican", "Diseño de interfaces entre componentes", "Diseño detallado: clases, métodos y datos de cada componente", "Codificación"],
+				"Primero el plano de la casa (arquitectura), luego cómo se conectan los cuartos y al final cada cuarto por dentro.", "niveles_diseno")),
+			_pz(5, _ej_clasificar("¿Qué principio de diseño aplica cada frase?", ["Abstracción", "Encapsulamiento", "Modularidad"], [
+				["Usar enviarCorreo() sin saber cómo se conecta al servidor", "Abstracción"], ["Los datos de la clase son privados y se cambian solo con métodos", "Encapsulamiento"], ["Dividir la app en módulos de perfil, mapa y actividad", "Modularidad"], ["Modelar un Alumno solo con nombre, matrícula y promedio", "Abstracción"], ["Cambiar la base de datos sin que las pantallas se enteren", "Encapsulamiento"], ["Probar el módulo de insignias por separado", "Modularidad"]],
+				"Quedarse con lo esencial = abstracción; esconder lo interno = encapsulamiento; dividir en partes independientes = modularidad.", "abstraccion")),
+			# ---- Tema 6 ----
+			_pz(6, _ej_clasificar("Un campo acepta edades de 18 a 60. ¿El sistema debe aceptar o rechazar cada valor?", ["Aceptar", "Rechazar"], [
+				["18", "Aceptar"], ["17", "Rechazar"], ["60", "Aceptar"], ["61", "Rechazar"], ["35", "Aceptar"], ["−1", "Rechazar"]],
+				"Los valores límite (17, 18, 60, 61) son los que más defectos encuentran; 35 representa a los válidos y −1 a los inválidos.", "valores_limite")),
+			_pz(6, _ej_clasificar("¿Qué nivel de prueba es cada caso?", ["Unitaria", "Integración", "Sistema", "Aceptación"], [
+				["Probar la función que calcula el IVA", "Unitaria"], ["Probar que el carrito y el módulo de pagos se comuniquen bien", "Integración"], ["Probar la app completa en un celular real", "Sistema"], ["El cliente usa la app y aprueba la entrega", "Aceptación"], ["Probar el método que valida el correo", "Unitaria"], ["Probar que el inicio de sesión y la base de datos funcionen juntos", "Integración"]],
+				"Una pieza → unitaria; piezas juntas → integración; todo el sistema → sistema; el cliente decide → aceptación.", "aceptacion")),
+			_pz(6, _ej_ordenar("Ordena los pasos para corregir un defecto (bug).", [
+				"Reproducir la falla", "Localizar la línea que la causa", "Corregir el código", "Volver a ejecutar las pruebas"],
+				"Si no puedes reproducir la falla, no sabes si la corregiste; al final se repiten las pruebas para no romper otra cosa.", "error_defecto_falla")),
+			_pz(6, _ej_ordenar("Ordena el ciclo de TDD (desarrollo guiado por pruebas).", [
+				"Escribir una prueba que falla (rojo)", "Escribir el código mínimo para que pase (verde)", "Refactorizar el código", "Repetir con la siguiente prueba"],
+				"En TDD la prueba va antes que el código: rojo → verde → refactorizar.", "tdd")),
+			# ---- Tema 7 ----
+			_pz(7, _ej_clasificar("¿Es una métrica de producto, de proceso o de proyecto?", ["Producto", "Proceso", "Proyecto"], [
+				["Líneas de código del módulo", "Producto"], ["Tiempo promedio para corregir un defecto", "Proceso"], ["Porcentaje de avance contra el calendario", "Proyecto"], ["Complejidad ciclomática de una función", "Producto"], ["Defectos encontrados por revisión", "Proceso"], ["Horas gastadas contra las planeadas", "Proyecto"]],
+				"Producto = mide el software; proceso = mide cómo se trabaja; proyecto = mide avance, costo y calendario.", "tipos_metricas")),
+			_pz(7, _ej_clasificar("Al cierre de la semana: PV = 50 %, EV = 40 % y AC = 55 h de 50 h planeadas. Clasifica cada afirmación.", ["Verdadero", "Falso"], [
+				["El proyecto va retrasado", "Verdadero"], ["SPI = 0.8", "Verdadero"], ["Se ha gastado menos esfuerzo del planeado", "Falso"], ["CPI es menor que 1", "Verdadero"], ["El equipo va adelantado", "Falso"]],
+				"EV < PV → retraso; SPI = 40/50 = 0.8; AC (55 h) > planeado (50 h) → CPI < 1.", "valor_ganado")),
+			_pz(7, _ej_ordenar("Ordena los pasos del enfoque GQM para definir qué medir.", [
+				"Definir la meta (Goal)", "Formular las preguntas que dicen si se cumple la meta", "Elegir las métricas que responden cada pregunta", "Recolectar los datos", "Interpretar los resultados contra la meta"],
+				"GQM = Goal, Question, Metric: primero la meta, luego las preguntas y al final las métricas.", "tipos_metricas")),
+			# ---- Tema 8 ----
+			_pz(8, _ej_ordenar("Ordena los eventos de un sprint de Scrum.", [
+				"Sprint Planning", "Daily Scrum (cada día)", "Sprint Review", "Sprint Retrospective"],
+				"Se planea, se trabaja con un Daily cada día, se revisa el producto y al final se revisa la forma de trabajar.", "daily")),
+			_pz(8, _ej_seleccionar("El sprint tiene 16 h disponibles. Elige las historias que caben, priorizando alta y luego media.", 16, [
+				["Iniciar sesión · prioridad alta", 7, true], ["Ver catálogo de cursos · prioridad alta", 5, true], ["Filtrar cursos por tema · prioridad media", 4, true], ["Recuperar contraseña · prioridad media", 3, false], ["Animación de bienvenida · prioridad baja", 2, false]],
+				"7 + 5 + 4 = 16 h; ya no cabe ninguna otra historia.", "sprint")),
+			_pz(8, _ej_clasificar("¿A quién le toca cada responsabilidad en Scrum?", ["Product Owner", "Scrum Master", "Equipo de desarrollo"], [
+				["Priorizar el Product Backlog", "Product Owner"], ["Quitar impedimentos y facilitar los eventos", "Scrum Master"], ["Estimar y construir las historias del sprint", "Equipo de desarrollo"], ["Decidir qué entra en la siguiente versión", "Product Owner"], ["Cuidar que se siga Scrum", "Scrum Master"], ["Decidir cómo construir cada historia", "Equipo de desarrollo"]],
+				"El PO decide el qué y el orden; el SM cuida el proceso; el equipo decide el cómo y construye.", "product_owner")),
+			# ---- Tema 9 ----
+			_pz(9, _ej_clasificar("¿Es una actividad de verificación o de validación?", ["Verificación", "Validación"], [
+				["Revisar que el código cumpla el estándar de codificación", "Verificación"], ["Mostrar el prototipo al cliente", "Validación"], ["Inspeccionar el SRS buscando contradicciones", "Verificación"], ["Pruebas de aceptación con usuarios reales", "Validación"], ["Comprobar que el diseño cumple el SRS", "Verificación"], ["Preguntar a los alumnos si la app les ayuda a estudiar", "Validación"]],
+				"Contra el documento → verificación; contra la necesidad del usuario → validación.", "verif_valid")),
+			_pz(9, _ej_clasificar("¿A qué característica de ISO/IEC 25010 corresponde cada requerimiento no funcional?", ["Usabilidad", "Fiabilidad", "Mantenibilidad", "Portabilidad"], [
+				["Un alumno nuevo completa su perfil sin ayuda", "Usabilidad"], ["No perder el progreso si la app se cierra de golpe", "Fiabilidad"], ["Agregar un tema nuevo sin tocar las demás pantallas", "Mantenibilidad"], ["Funcionar en Android y en iOS", "Portabilidad"], ["Recuperarse sin perder datos tras un fallo", "Fiabilidad"], ["Que el código sea fácil de modificar", "Mantenibilidad"]],
+				"Fácil de usar = usabilidad; no fallar y recuperarse = fiabilidad; fácil de cambiar = mantenibilidad; correr en varios entornos = portabilidad.", "iso25010")),
+			_pz(9, _ej_ordenar("Ordena los pasos de una inspección de software.", [
+				"Planear la inspección y repartir el artefacto", "Lectura individual buscando defectos", "Reunión de inspección para registrar los defectos", "Corregir los defectos encontrados", "Verificar que las correcciones quedaron bien"],
+				"Primero cada quien lee, luego se juntan los hallazgos, se corrige y se verifica; encontrar defectos sin ejecutar cuesta menos que en pruebas.", "revisiones")),
+			# ---- Tema 10 ----
+			_pz(10, _ej_ordenar("Ordena los pasos para compartir un cambio con tu equipo en Git.", [
+				"git pull (traer lo último)", "Modificar los archivos", "git add (preparar los cambios)", "git commit (guardar en el historial)", "git push (subir al remoto)"],
+				"Primero actualizas tu copia para evitar conflictos; luego cambias, preparas, guardas y subes.", "repo_remoto")),
+			_pz(10, _ej_clasificar("¿Es un buen mensaje de commit o uno malo?", ["Buen mensaje", "Mal mensaje"], [
+				["Agrega validación del alias de 3 a 20 caracteres", "Buen mensaje"], ["cambios", "Mal mensaje"], ["Corrige el cálculo del porcentaje en registrar_intento", "Buen mensaje"], ["asdf", "Mal mensaje"], ["ya quedó", "Mal mensaje"], ["Elimina el módulo duplicado del mapa", "Buen mensaje"]],
+				"Un buen mensaje dice qué cambió y por qué; «cambios» o «asdf» no le sirven a nadie dentro de una semana.", "commit_git")),
+			_pz(10, _ej_clasificar("¿Qué comando de Git usarías?", ["git branch", "git merge", "git pull", "git push"], [
+				["Crear una línea de trabajo aparte para el CU-08", "git branch"], ["Unir la rama feature/CU-08 a main", "git merge"], ["Traer a mi copia lo que subieron mis compañeros", "git pull"], ["Subir mis commits al repositorio remoto", "git push"], ["Juntar dos ramas y resolver conflictos si los hay", "git merge"], ["Actualizar mi main antes de empezar", "git pull"]],
+				"branch = separar; merge = unir; pull = traer; push = subir.", "ramas")),
+			# ---- Tema 11 ----
+			_pz(11, _ej_ordenar("Ordena los pasos de la gestión de riesgos.", [
+				"Identificar los riesgos", "Analizar su probabilidad e impacto", "Planear la respuesta", "Monitorear los riesgos"],
+				"No se puede responder a un riesgo que no se ha identificado ni analizado; el monitoreo dura todo el proyecto.", "riesgo")),
+			_pz(11, _ej_clasificar("¿Qué estrategia ante el riesgo se está aplicando?", ["Evitar", "Mitigar", "Transferir", "Aceptar"], [
+				["Cambiar de librería porque la actual podría quedar sin soporte", "Evitar"], ["Hacer respaldos diarios por si se daña el disco", "Mitigar"], ["Contratar un proveedor que se haga responsable del servidor", "Transferir"], ["Seguir adelante y tener un plan B si el integrante se enferma", "Aceptar"], ["Capacitar al equipo en Godot para reducir los errores", "Mitigar"], ["Comprar un seguro para el equipo de cómputo", "Transferir"]],
+				"Quitarlo = evitar; achicarlo = mitigar; pasarlo a otro = transferir; asumirlo con plan B = aceptar.", "estrategias_riesgo")),
+			_pz(11, _ej_seleccionar("Esta semana el equipo tiene 24 h disponibles. Elige las tareas del plan que caben, priorizando alta y luego media.", 24, [
+				["Codificar CU-08 · prioridad alta", 10, true], ["Pruebas de CU-08 · prioridad alta", 6, true], ["Actualizar el SRS · prioridad media", 4, true], ["Manual de usuario · prioridad media", 8, false], ["Rediseñar el logo · prioridad baja", 6, false]],
+				"10 + 6 + 4 = 20 h; el manual (8 h) ya no cabe y el logo es prioridad baja: alcance, tiempo y costo se equilibran.", "triple_restriccion")),
+			# ---- Tema 12 ----
+			_pz(12, _ej_clasificar("¿Es una conducta ética o no ética?", ["Ética", "No ética"], [
+				["Usar una librería respetando su licencia", "Ética"], ["Entregar el código de otro equipo como propio", "No ética"], ["Avisar al cliente que el proyecto se va a retrasar", "Ética"], ["Ocultar un defecto conocido para entregar a tiempo", "No ética"], ["Pedir permiso antes de recolectar datos personales", "Ética"], ["Guardar las contraseñas en texto plano", "No ética"]],
+				"Respetar licencias, informar a tiempo y proteger a los usuarios es ético; plagiar, ocultar defectos y descuidar datos no lo es.", "codigo_etica")),
+			_pz(12, _ej_clasificar("¿Qué principio ético está en juego en cada caso?", ["Privacidad", "Honestidad", "Licencias"], [
+				["Pedir consentimiento antes de recolectar datos", "Privacidad"], ["Avisar al cliente del retraso en cuanto se detecta", "Honestidad"], ["Revisar los términos antes de usar código ajeno", "Licencias"], ["Guardar las contraseñas con hash", "Privacidad"], ["No ocultar un defecto conocido", "Honestidad"], ["Dar crédito al autor del código reutilizado", "Licencias"]],
+				"Datos de los usuarios → privacidad; decir la verdad al cliente → honestidad; respetar al autor → licencias.", "licencias")),
+		],
+		# ---- CU-11: una práctica de ingeniero por tema (escenario; los ejercicios se sortean del banco) ----
 		"practicas": [
-			_practica(1, "Biblioteca escolar",
-				"El cliente, la biblioteca de una preparatoria, pide una app para registrar préstamos de libros. Vas a aplicar lo aprendido en la materia para analizar y planear el proyecto.",
-				[
-					_ej_clasificar("Clasifica cada requerimiento del cliente.", ["Funcional", "No funcional"], [
-						["Registrar el préstamo de un libro", "Funcional"],
-						["Responder en menos de 2 segundos", "No funcional"],
-						["Enviar recordatorio de devolución", "Funcional"],
-						["Funcionar sin conexión a internet", "No funcional"],
-						["Cifrar las contraseñas de los usuarios", "No funcional"],
-						["Generar el reporte mensual de préstamos", "Funcional"],
-					], "Funcional = una acción que el sistema hace; no funcional = una cualidad o límite (tiempo, seguridad, disponibilidad).", "req_no_funcional"),
-					_ej_construir("Arma el diagrama de casos de uso: coloca cada elemento donde va.", ["Actor", "Caso de uso"], [
-						["Bibliotecario", "Actor"],
-						["Prestar libro", "Caso de uso"],
-						["Alumno", "Actor"],
-						["Devolver libro", "Caso de uso"],
-						["Consultar catálogo", "Caso de uso"],
-						["Sistema de correo", "Actor"],
-					], "Los actores son personas o sistemas externos; los casos de uso son las funciones que el sistema les ofrece.", "casos_uso"),
-					_ej_ordenar("Ordena las fases del modelo en cascada, de la primera a la última.", [
-						"Análisis de requerimientos", "Diseño", "Implementación", "Pruebas", "Mantenimiento",
-					], "No puedes probar lo que no has programado ni programar lo que no has diseñado.", "cascada"),
-					_ej_seleccionar("El primer sprint tiene 20 h disponibles. Elige las tareas que caben sin exceder las horas, priorizando primero las de prioridad alta y luego las de media.", 20, [
-						["Registrar préstamo · prioridad alta", 8, true],
-						["Buscar libro por título · prioridad alta", 6, true],
-						["Recordatorio por correo · prioridad media", 5, true],
-						["Modo oscuro · prioridad baja", 6, false],
-						["Estadísticas con gráficas · prioridad baja", 10, false],
-					], "Alta + alta + media = 19 h; cualquier tarea de prioridad baja ya no cabe en las 20 h.", "sprint"),
-				]),
-			_practica(2, "Lanzamiento del Sprint 3",
-				"Tu equipo de tres personas inicia el Sprint 3 de su proyecto escolar. Vas a aplicar el TSP: repartir roles, planear el ciclo, elegir tareas y leer el valor ganado.",
-				[
-					_ej_clasificar("¿A qué rol del TSP le corresponde cada tarea?", ["Líder de equipo", "Gerente de calidad", "Gerente de planeación"], [
-						["Dirigir la reunión semanal", "Líder de equipo"],
-						["Revisar que las inspecciones se hagan", "Gerente de calidad"],
-						["Armar el Gantt del sprint", "Gerente de planeación"],
-						["Registrar los defectos encontrados", "Gerente de calidad"],
-						["Calcular el valor ganado semanal", "Gerente de planeación"],
-						["Resolver conflictos entre integrantes", "Líder de equipo"],
-					], "Líder = coordina; calidad = proceso y defectos; planeación = plan y valor ganado.", "roles_tsp"),
-					_ej_ordenar("Ordena los pasos del lanzamiento (launch) del TSP.", [
-						"Definir las metas del equipo", "Asignar los roles", "Estimar tamaño y horas de las tareas",
-						"Construir el calendario", "Evaluar los riesgos", "Presentar el plan al profesor",
-					], "Primero el qué (metas) y el quién (roles); luego el cuánto (estimar), el cuándo (calendario) y los riesgos; al final se presenta.", "lanzamiento"),
-					_ej_seleccionar("Esta semana el equipo tiene 24 h disponibles. Elige las tareas del plan que caben, priorizando alta y luego media.", 24, [
-						["Codificar CU-08 · prioridad alta", 10, true],
-						["Pruebas de CU-08 · prioridad alta", 6, true],
-						["Actualizar el SRS · prioridad media", 4, true],
-						["Manual de usuario · prioridad media", 8, false],
-						["Rediseñar el logo · prioridad baja", 6, false],
-					], "10 + 6 + 4 = 20 h; el manual (8 h) ya no cabe y el logo es prioridad baja.", "horas_tarea"),
-					_ej_clasificar("Al cierre de la semana: PV = 50 %, EV = 40 % y AC = 55 h de 50 h planeadas. Clasifica cada afirmación.", ["Verdadero", "Falso"], [
-						["El proyecto va retrasado", "Verdadero"],
-						["SPI = 0.8", "Verdadero"],
-						["Se ha gastado menos esfuerzo del planeado", "Falso"],
-						["CPI es menor que 1", "Verdadero"],
-						["El equipo va adelantado", "Falso"],
-					], "EV < PV → retraso; SPI = 40/50 = 0.8; AC (55 h) > planeado (50 h) → CPI < 1.", "spi_cpi"),
-				]),
-			_practica(3, "App de pedidos en línea",
-				"Una fonda quiere una app para recibir pedidos y pagos. Vas a decidir su arquitectura, elegir patrones de diseño y detectar violaciones a SOLID.",
-				[
-					_ej_ordenar("Ordena las capas de la arquitectura, de la más cercana al usuario a la más lejana.", [
-						"Interfaz de usuario", "Lógica de negocio", "Acceso a datos", "Base de datos",
-					], "Presentación arriba, datos abajo; cada capa solo habla con la adyacente.", "capas"),
-					_ej_clasificar("Elige el patrón de diseño adecuado para cada necesidad.", ["Observador", "Singleton", "Estrategia", "Adaptador"], [
-						["Una sola conexión a la base de datos", "Singleton"],
-						["Avisar a la pantalla cuando cambie el carrito", "Observador"],
-						["Cambiar el cálculo de envío según el país", "Estrategia"],
-						["Usar una librería de pagos con otra interfaz", "Adaptador"],
-						["Elegir entre varios algoritmos de descuento", "Estrategia"],
-						["Un único registro de configuración global", "Singleton"],
-					], "Uno solo → Singleton; avisar cambios → Observador; algoritmos intercambiables → Estrategia; interfaz incompatible → Adaptador.", "patrones"),
-					_ej_clasificar("¿Qué principio SOLID se viola en cada caso?", ["SRP", "OCP", "DIP"], [
-						["Una clase calcula el total, imprime el ticket y envía el correo", "SRP"],
-						["Para agregar un método de pago hay que modificar un switch gigante", "OCP"],
-						["La lógica de negocio crea directamente una conexión MySQL", "DIP"],
-						["La clase Pedido también guarda archivos en disco", "SRP"],
-						["El módulo de reportes depende de una clase concreta de Excel", "DIP"],
-					], "Muchas responsabilidades → SRP; modificar para extender → OCP; depender de clases concretas → DIP.", "srp"),
-					_ej_seleccionar("Tienes 12 h para refactorizar antes de la entrega. Elige las mejoras que caben, priorizando las de prioridad alta y luego media.", 12, [
-						["Extraer la lógica de pago a su propia clase · prioridad alta", 5, true],
-						["Agregar una interfaz para el acceso a datos · prioridad alta", 4, true],
-						["Renombrar variables confusas · prioridad media", 2, true],
-						["Cambiar los colores de la app · prioridad baja", 3, false],
-						["Reescribir todo en otro lenguaje · prioridad baja", 40, false],
-					], "5 + 4 + 2 = 11 h; lo demás es prioridad baja o no cabe.", "ocp"),
-				]),
+			_practica(1, "Tu primer programa", "Vas a aplicar la lógica de programación básica y los fundamentos de la ingeniería de software: algoritmos, estructuras de control, tipos de datos y atributos del buen software."),
+			_practica(2, "Elegir el modelo", "Un despacho recibe tres proyectos distintos. Vas a decidir qué modelo de ciclo de vida le conviene a cada uno y en qué orden se trabaja."),
+			_practica(3, "Biblioteca escolar", "El cliente, la biblioteca de una preparatoria, pide una app para registrar préstamos de libros. Vas a obtener, escribir, priorizar y validar sus requerimientos."),
+			_practica(4, "Control escolar", "Vas a modelar con UML un sistema de control escolar: elegir el diagrama correcto, colocar actores y casos de uso y distinguir include de extend."),
+			_practica(5, "Diseñar la app de pedidos", "Una fonda quiere una app para recibir pedidos. Vas a repartir responsabilidades con MVC, detectar malas decisiones de diseño y aplicar los principios básicos."),
+			_practica(6, "Probar el registro", "Vas a planear las pruebas de un formulario de registro: valores límite, niveles de prueba, corrección de defectos y TDD."),
+			_practica(7, "Medir el proyecto", "Tu equipo quiere saber si el proyecto va bien. Vas a clasificar métricas, leer el valor ganado y definir qué medir con GQM."),
+			_practica(8, "Planear el sprint", "Tu equipo Scrum inicia un sprint de dos semanas. Vas a ordenar los eventos, elegir las historias que caben y repartir responsabilidades."),
+			_practica(9, "Asegurar la calidad", "Antes de la entrega, vas a distinguir verificación de validación, ubicar cada requerimiento no funcional en ISO/IEC 25010 y organizar una inspección."),
+			_practica(10, "Trabajar con Git", "Tu equipo comparte el código en GitHub. Vas a ordenar el flujo de trabajo, escribir buenos commits y elegir el comando correcto."),
+			_practica(11, "Gestionar el proyecto", "Como gerente de planeación, vas a administrar los riesgos del semestre y decidir qué tareas caben en las horas disponibles."),
+			_practica(12, "Decidir con ética", "Vas a enfrentar dilemas reales del desarrollo de software: licencias, honestidad con el cliente y privacidad de los usuarios."),
 		],
 		"intentos_practica": [],
 	}
 
-func _materia(id: int, nombre: String, corto: String, descripcion: String, icono: String, color: String) -> Dictionary:
+func _tema(id: int, nombre: String, corto: String, descripcion: String, icono: String, color: String) -> Dictionary:
 	return {
 		"id": id,
 		"nombre": nombre,
@@ -1439,19 +2061,23 @@ func _materia(id: int, nombre: String, corto: String, descripcion: String, icono
 		"color": color,
 	}
 
-func _practica(id_materia: int, titulo: String, escenario: String, ejercicios: Array) -> Dictionary:
+func _practica(id_tema: int, titulo: String, escenario: String) -> Dictionary:
 	return {
-		"id_materia": id_materia,
+		"id_tema": id_tema,
 		"titulo": titulo,
 		"escenario": escenario,
-		"ejercicios": ejercicios,
 		"intentos": 0,
 		"mejor_porcentaje": -1,
 		"mejor_puntos": 0,
 		"dominada": false,
 	}
 
-## Ejercicio "clasificar": arrastrar (tocar) tarjetas a categorías.
+## Asigna un ejercicio de manipulación a un tema.
+func _pz(id_tema: int, ej: Dictionary) -> Dictionary:
+	ej["id_tema"] = id_tema
+	return ej
+
+## Ejercicio "clasificar": tocar la etiqueta de cada tarjeta para asignarle categoría.
 func _ej_clasificar(instruccion: String, categorias: Array, piezas: Array, justificacion: String, concepto: String = "") -> Dictionary:
 	var lista: Array = []
 	for p in piezas:
@@ -1477,49 +2103,49 @@ func _ej_seleccionar(instruccion: String, limite: int, piezas: Array, justificac
 	return {"tipo": "seleccionar", "instruccion": instruccion, "limite": limite, "piezas": lista,
 		"justificacion": justificacion, "concepto": concepto}
 
-func _concepto(id: String, id_modulo: int, titulo: String, explicacion: String, claves: Array, truco: String) -> Dictionary:
+func _concepto(id: String, id_tema: int, titulo: String, explicacion: String, claves: Array, truco: String) -> Dictionary:
 	return {
 		"id": id,
-		"id_modulo": id_modulo,
+		"id_tema": id_tema,
 		"titulo": titulo,
 		"explicacion": explicacion,
-		"claves": claves,          # chips de "categorías / ideas clave" del mockup
-		"truco": truco,            # "Truco rápido" del mockup
+		"claves": claves,          # ideas clave (chips en la pantalla de teoría)
+		"truco": truco,            # truco rápido para recordarlo (también es la pista de CU-10)
 	}
 
 func _insignia(id: String, titulo: String, descripcion: String, condicion: String, icono: String, color: String) -> Dictionary:
 	return {
 		"id": id,
 		"titulo": titulo,
-		"descripcion": descripcion,
-		"condicion": condicion,
-		"icono": icono,            # tipo de Icono.gd
+		"descripcion": descripcion,   # texto que se muestra al obtenerla
+		"condicion": condicion,       # "Cómo se obtiene" para las bloqueadas
+		"icono": icono,               # tipo de Icono.gd
 		"color": color,
 		"obtenida": false,
-		"fecha_obtencion": "",
+		"fecha": "",
 	}
 
-func _modulo(id: int, nombre: String, tipo: String, descripcion: String, estado: String = "bloqueado", id_materia: int = 1) -> Dictionary:
+func _modulo(id: int, nombre: String, tipo: String, descripcion: String, estado: String = "bloqueado", id_tema: int = 1, num_preguntas: int = PREGUNTAS_POR_QUIZ) -> Dictionary:
 	return {
 		"id": id,
-		"id_materia": id_materia,     # CU-08: materia a la que pertenece el módulo
+		"id_tema": id_tema,          # CU-08: tema al que pertenece el módulo
 		"nombre": nombre,
-		"tipo": tipo,                 # "quiz" o "puzzle"
+		"tipo": tipo,                # "quiz" | "puzzle"
 		"descripcion": descripcion,
-		"num_preguntas": 5,
+		"num_preguntas": num_preguntas,   # preguntas que se sortean (quiz) o ejercicios (puzzle)
 		"puntos_maximos": 100,
-		"estado": estado,             # "bloqueado" | "desbloqueado" | "completado"
-		"mejor_puntaje": -1,          # % del mejor intento; -1 = sin intentos
-		"puntos_obtenidos": 0,        # puntos que ya aportó al total del perfil
+		"estado": estado,            # "bloqueado" | "desbloqueado" | "completado"
+		"mejor_puntaje": -1,         # % (-1 = sin intentos)
+		"puntos_obtenidos": 0,       # puntos del mejor intento completado (suma al total)
 	}
 
-func _reactivo(id: int, id_modulo: int, pregunta: String, opciones: Array, correcta: int, retro: String, id_concepto: String = "") -> Dictionary:
+func _reactivo(id: int, id_tema: int, pregunta: String, opciones: Array, correcta: int, retro: String, id_concepto: String = "") -> Dictionary:
 	return {
 		"id": id,
-		"id_modulo": id_modulo,
+		"id_tema": id_tema,          # banco del tema; cada quiz sortea 5
 		"pregunta": pregunta,
 		"opciones": opciones,
-		"respuesta_correcta": correcta,   # índice (0-3) dentro de opciones
-		"retroalimentacion": retro,       # texto corto en la pantalla de respuesta incorrecta
-		"id_concepto": id_concepto,       # CU-04: concepto de teoría asociado ("" = sin concepto)
+		"respuesta_correcta": correcta,
+		"retroalimentacion": retro,
+		"id_concepto": id_concepto,  # concepto de teoría asociado (CU-04); "" = sin concepto
 	}

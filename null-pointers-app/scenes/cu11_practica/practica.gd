@@ -3,7 +3,9 @@
 #
 # Flujo (SRS 3.0):
 #   1-2. El mapa (CU-02) desbloqueó el nodo final y el alumno tocó "Iniciar".
-#        JuegoRepository.practica_materia trae la materia.
+#        JuegoRepository.practica_tema trae el tema.
+#        Si JuegoRepository.puzzle_modulo > 0, la escena juega un MÓDULO tipo puzzle
+#        del mapa (CU-03 con mecánicas de manipulación) en lugar de la práctica.
 #   3.   Se carga la práctica: escenario + secuencia de 3 a 5 ejercicios      → _ready()
 #   4.   Se muestra el escenario y el ejercicio actual, de uno de estos tipos  → _mostrar_ejercicio()
 #          clasificar  : tocar la etiqueta de cada tarjeta para asignarle categoría
@@ -13,7 +15,7 @@
 #   5.   "Comprobar"                                                          → _on_comprobar()
 #   6.   Evaluación pieza por pieza + retroalimentación + puntos proporcionales
 #   7.   Siguiente ejercicio                                                  → _on_continuar()
-#   8-9. Resumen; se guarda el intento; ≥ 70 % → materia "Dominada" + insignia → _terminar()
+#   8-9. Resumen; se guarda el intento; ≥ 70 % → tema "Dominado" + insignia   → _terminar()
 #   Alt. ejercicio incorrecto → solución recomendada con justificación + "Ver teoría"
 #   Alt. < 70 % → no se alcanzó el mínimo; se conserva el mejor puntaje
 #   Alt. abandono → confirmación; si acepta, se descarta el intento
@@ -31,9 +33,11 @@ const GRIS    := Color("#8A90A0")
 
 var icono_script := preload("res://assets/ui/Icono.gd")
 
-var id_materia: int = 1
-var materia: Dictionary = {}
+var id_tema: int = 1
+var tema: Dictionary = {}
 var practica: Dictionary = {}
+var id_modulo: int = 0             # > 0 = modo módulo puzzle (CU-03); 0 = práctica de ingeniero (CU-11)
+var modulo: Dictionary = {}
 var ejercicios: Array = []
 var indice := 0
 var piezas_correctas_total := 0
@@ -51,16 +55,20 @@ var evaluado := false
 
 
 func _ready() -> void:
-	id_materia = JuegoRepository.practica_materia
-	materia = JuegoRepository.obtener_materia(id_materia)
-	practica = JuegoRepository.obtener_practica(id_materia)
-	if practica.is_empty() or materia.is_empty():
-		push_error("La materia %d no tiene práctica" % id_materia)
+	id_tema = JuegoRepository.practica_tema
+	id_modulo = JuegoRepository.puzzle_modulo
+	tema = JuegoRepository.obtener_tema(id_tema)
+	practica = JuegoRepository.obtener_practica(id_tema)
+	if id_modulo > 0:
+		modulo = JuegoRepository.obtener_modulo(id_modulo)
+		ejercicios = JuegoRepository.obtener_ejercicios_modulo(id_modulo)
+	else:
+		ejercicios = JuegoRepository.sortear_practica(id_tema)     # 4 ejercicios al azar
+	if tema.is_empty() or ejercicios.is_empty() or (id_modulo == 0 and practica.is_empty()):
+		push_error("El tema %d no tiene ejercicios" % id_tema)
 		_volver_al_mapa()
 		return
-	ejercicios = practica["ejercicios"]
-	for ej in ejercicios:
-		piezas_totales += ej["piezas"].size()
+	_contar_piezas()
 
 	%BtnSalir.pressed.connect(%PanelSalir.show)
 	%BtnSeguir.pressed.connect(%PanelSalir.hide)
@@ -74,11 +82,22 @@ func _ready() -> void:
 	%BtnReintentar.pressed.connect(_on_reintentar)
 	%BtnVolverMapa.pressed.connect(_volver_al_mapa)
 
-	%LblMateria.text = "Práctica · %s" % materia.get("corto", "")
-	%LblEscenarioTitulo.text = practica["titulo"]
-	%LblEscenario.text = practica["escenario"]
+	if id_modulo > 0:
+		%LblMateria.text = "Puzzle · %s" % tema.get("corto", "")
+		%LblEscenarioTitulo.text = "Puzzle · %s" % tema.get("nombre", "")
+		%LblEscenario.text = "Clasifica, ordena y arma con lo que aprendiste en los quizzes. Necesitas %d %% de piezas correctas para completar el módulo." % JuegoRepository.PORCENTAJE_MINIMO
+	else:
+		%LblMateria.text = "Práctica · %s" % tema.get("corto", "")
+		%LblEscenarioTitulo.text = practica["titulo"]
+		%LblEscenario.text = practica["escenario"]
 	%Barra.max_value = ejercicios.size()
 	_mostrar_ejercicio()
+
+
+func _contar_piezas() -> void:
+	piezas_totales = 0
+	for ej in ejercicios:
+		piezas_totales += ej["piezas"].size()
 
 
 # ============================ PASO 4: EJERCICIO ============================
@@ -344,7 +363,8 @@ func _on_comprobar() -> void:
 		_pintar_resultado_pieza(i, ok, detalle)
 
 	piezas_correctas_total += correctas
-	puntos_practica = int(round(float(piezas_correctas_total) / float(piezas_totales) * JuegoRepository.PUNTOS_PRACTICA))
+	var puntos_max: int = int(modulo.get("puntos_maximos", JuegoRepository.PUNTOS_PRACTICA)) if id_modulo > 0 else JuegoRepository.PUNTOS_PRACTICA
+	puntos_practica = int(round(float(piezas_correctas_total) / float(piezas_totales) * puntos_max))
 	resumen_ejercicios.append({"instruccion": ej["instruccion"], "correctas": correctas, "total": total})
 
 	var perfecto := correctas == total
@@ -397,8 +417,8 @@ func _on_ver_teoria() -> void:
 	var c := JuegoRepository.obtener_concepto_por_id(str(ejercicios[indice].get("concepto", "")))
 	if c.is_empty():
 		return
-	var modulo := JuegoRepository.obtener_modulo(int(c["id_modulo"]))
-	%LblTeoriaEtq.text = ("CONCEPTO · %s" % modulo.get("nombre", "")).to_upper()
+	var tema_c := JuegoRepository.obtener_tema(int(c.get("id_tema", 1)))
+	%LblTeoriaEtq.text = ("CONCEPTO · %s" % tema_c.get("corto", "")).to_upper()
 	%LblTeoriaTitulo.text = c["titulo"]
 	%LblTeoriaTexto.text = c["explicacion"]
 	%LblTeoriaTruco.text = "Truco rápido: " + c["truco"]
@@ -417,10 +437,13 @@ func _on_continuar() -> void:
 
 # ============================ PASOS 8-9: RESULTADO ============================
 func _terminar() -> void:
-	var res := JuegoRepository.registrar_intento_practica(id_materia, piezas_correctas_total, piezas_totales)
+	if id_modulo > 0:
+		_terminar_modulo()
+		return
+	var res := JuegoRepository.registrar_intento_practica(id_tema, piezas_correctas_total, piezas_totales)
 	var aprobada: bool = res["aprobada"]
 
-	%LblResMateria.text = "Práctica de ingeniero · %s" % materia.get("corto", "")
+	%LblResMateria.text = "Práctica de ingeniero · %s" % tema.get("corto", "")
 	%LblResPorcentaje.text = "%d %%" % res["porcentaje"]
 	%Anillo.porcentaje = res["porcentaje"]
 	%Anillo.color = VERDE if aprobada else NARANJA
@@ -429,10 +452,10 @@ func _terminar() -> void:
 	%LblResIntentos.text = str(res["intentos"])
 
 	if aprobada:
-		%LblResTitulo.text = "¡Materia dominada!" if res["recien_dominada"] else "¡Práctica aprobada!"
+		%LblResTitulo.text = "¡Tema dominado!" if res["recien_dominada"] else "¡Práctica aprobada!"
 		%PanelEstado.theme_type_variation = &"TarjetaVerde"
 		%IconoEstado.tipo = "check"; %IconoEstado.fondo = VERDE; %IconoEstado.color = Color.WHITE
-		%LblResEstado.text = "%s · Dominada" % materia.get("corto", "")
+		%LblResEstado.text = "%s · Dominado" % tema.get("corto", "")
 		%LblResEstado.theme_type_variation = &"TextoVerde"
 		%LblResDetalle.theme_type_variation = &"TextoVerdeNormal"
 		%LblResDetalle.text = "Alcanzaste el mínimo de %d %%." % JuegoRepository.PORCENTAJE_MINIMO
@@ -447,12 +470,72 @@ func _terminar() -> void:
 		%LblResEstado.text = "No alcanzaste el mínimo"
 		%LblResEstado.theme_type_variation = &"TextoNaranja"
 		%LblResDetalle.theme_type_variation = &"TextoNaranjaNormal"
-		%LblResDetalle.text = "Necesitas %d %% para dominar la materia." % JuegoRepository.PORCENTAJE_MINIMO
+		%LblResDetalle.text = "Necesitas %d %% para dominar el tema." % JuegoRepository.PORCENTAJE_MINIMO
 		if res["mejor_previo"] >= 0:
 			%LblResDetalle.text += " Se conserva tu mejor puntaje: %d %%." % res["mejor_previo"]
 		%BtnReintentar.show()
 		%BtnVolverMapa.theme_type_variation = &"BotonSecundario"
 
+	_mostrar_insignias(res)
+	_mostrar_resumen()
+	_mostrar_total(int(res["puntos_totales"]), int(res["puntos_sumados"]))
+	%PanelEjercicio.hide()
+	%PanelResultado.show()
+
+
+## Modo módulo puzzle (CU-03): el intento se registra como cualquier módulo del mapa.
+func _terminar_modulo() -> void:
+	var res := JuegoRepository.registrar_intento(id_modulo, piezas_correctas_total, -1, 0, piezas_totales)
+	var completado: bool = res["completado"]
+
+	%LblResMateria.text = "%s · %s" % [tema.get("corto", ""), modulo.get("nombre", "")]
+	%LblResPorcentaje.text = "%d %%" % res["porcentaje"]
+	%Anillo.porcentaje = res["porcentaje"]
+	%Anillo.color = VERDE if completado else NARANJA
+	%LblResPuntos.text = str(res["puntos"])
+	%LblResPiezas.text = "%d/%d" % [piezas_correctas_total, piezas_totales]
+	%LblResIntentos.text = str(JuegoRepository.obtener_intentos(id_modulo).size())
+
+	if completado:
+		%LblResTitulo.text = "¡Puzzle completado!"
+		%PanelEstado.theme_type_variation = &"TarjetaVerde"
+		%IconoEstado.tipo = "check"; %IconoEstado.fondo = VERDE; %IconoEstado.color = Color.WHITE
+		%LblResEstado.theme_type_variation = &"TextoVerde"
+		%LblResDetalle.theme_type_variation = &"TextoVerdeNormal"
+		var sig: Dictionary = res["siguiente_desbloqueado"]
+		if not sig.is_empty():
+			%LblResEstado.text = "Siguiente módulo desbloqueado"
+			%LblResDetalle.text = sig["nombre"]
+		elif res.get("practica_desbloqueada", false):
+			%LblResEstado.text = "¡Práctica de ingeniero desbloqueada!"
+			%LblResDetalle.text = "Completaste todos los módulos del tema. Búscala al final del mapa."
+		else:
+			%LblResEstado.text = "Módulo completado"
+			%LblResDetalle.text = "Alcanzaste el mínimo de %d %%." % JuegoRepository.PORCENTAJE_MINIMO
+		if res["mejor_previo"] >= 0 and not res["es_mejor"]:
+			%LblResDetalle.text += " Se conserva tu mejor puntaje: %d %%." % res["mejor_previo"]
+		%BtnVolverMapa.theme_type_variation = &""
+	else:
+		%LblResTitulo.text = "Puzzle terminado"
+		%PanelEstado.theme_type_variation = &"TarjetaNaranja"
+		%IconoEstado.tipo = "alerta"; %IconoEstado.fondo = NARANJA; %IconoEstado.color = Color.WHITE
+		%LblResEstado.text = "No alcanzaste el mínimo"
+		%LblResEstado.theme_type_variation = &"TextoNaranja"
+		%LblResDetalle.theme_type_variation = &"TextoNaranjaNormal"
+		%LblResDetalle.text = "Necesitas %d %% de piezas correctas para completar el módulo." % JuegoRepository.PORCENTAJE_MINIMO
+		if res["mejor_previo"] >= 0:
+			%LblResDetalle.text += " Se conserva tu mejor puntaje: %d %%." % res["mejor_previo"]
+		%BtnVolverMapa.theme_type_variation = &"BotonSecundario"
+	%BtnReintentar.show()
+	%BtnReintentar.text = "Volver a jugar" if completado else "Reintentar"
+	_mostrar_insignias(res)
+	_mostrar_resumen()
+	_mostrar_total(int(res["puntos_totales"]), int(res["puntos_sumados"]))
+	%PanelEjercicio.hide()
+	%PanelResultado.show()
+
+
+func _mostrar_insignias(res: Dictionary) -> void:
 	var nuevas: Array = res.get("insignias_nuevas", [])
 	if not nuevas.is_empty():
 		var nombres: Array = []
@@ -460,7 +543,8 @@ func _terminar() -> void:
 			nombres.append(i["titulo"])
 		%LblResDetalle.text += "\nNueva insignia: %s" % ", ".join(nombres)
 
-	# Resumen de los ejercicios
+
+func _mostrar_resumen() -> void:
 	for hijo in %Resumen.get_children():
 		hijo.queue_free()
 	for k in resumen_ejercicios.size():
@@ -486,18 +570,17 @@ func _terminar() -> void:
 		fila.add_child(chip)
 		%Resumen.add_child(fila)
 
-	%LblResTotal.text = "%d pts" % res["puntos_totales"]
-	if res["puntos_sumados"] > 0:
+
+func _mostrar_total(puntos_totales: int, puntos_sumados: int) -> void:
+	%LblResTotal.text = "%d pts" % puntos_totales
+	if puntos_sumados > 0:
 		%ChipDelta.theme_type_variation = &"ChipVerde"
-		%LblResDelta.text = "+%d" % res["puntos_sumados"]
+		%LblResDelta.text = "+%d" % puntos_sumados
 		%LblResDelta.theme_type_variation = &"TextoVerde"
 	else:
 		%ChipDelta.theme_type_variation = &"ChipGris"
 		%LblResDelta.text = "Sin cambios"
 		%LblResDelta.theme_type_variation = &"Pequeno"
-
-	%PanelEjercicio.hide()
-	%PanelResultado.show()
 
 
 func _on_reintentar() -> void:
@@ -505,11 +588,19 @@ func _on_reintentar() -> void:
 	piezas_correctas_total = 0
 	puntos_practica = 0
 	resumen_ejercicios.clear()
+	# Cada intento sortea ejercicios (práctica) o los baraja (módulo puzzle)
+	if id_modulo > 0:
+		ejercicios = JuegoRepository.obtener_ejercicios_modulo(id_modulo)
+	else:
+		ejercicios = JuegoRepository.sortear_practica(id_tema)
+	_contar_piezas()
+	%Barra.max_value = ejercicios.size()
 	%PanelResultado.hide()
 	%PanelEjercicio.show()
 	_mostrar_ejercicio()
 
 
 func _volver_al_mapa() -> void:
-	JuegoRepository.materia_seleccionada = id_materia
+	JuegoRepository.tema_seleccionado = id_tema
+	JuegoRepository.puzzle_modulo = 0
 	get_tree().change_scene_to_file(RUTA_MAPA)
