@@ -1,15 +1,15 @@
-# res://scenes/cu08_materias/materias.gd
-# CU-08: Elegir materia. Catálogo de materias del área de ingeniería de software.
+# res://scenes/cu08_temas/temas.gd
+# CU-08: Elegir tema. Catálogo de los temas de la materia Introducción a la Ingeniería de Software.
 #
 # Flujo (SRS 3.0):
 #   1-2. "Jugar" → se carga el catálogo con nombre, módulos completados/total y % → _construir_catalogo()
-#   3-4. Toca una materia → se recuerda y se abre su mapa 2D (CU-02)             → _on_materia_presionada()
+#   3-4. Toca un tema → se recuerda y se abre su mapa 2D (CU-02)                → _on_tema_presionado()
 #   5-6. Desde el mapa se puede regresar aquí o al menú.
-#   Alt. materia sin avance → 0 % y etiqueta "Sin iniciar" (sigue seleccionable)
-#   Alt. última materia visitada → resaltada como "Continuar en…"
+#   Alt. tema sin avance → 0 % y etiqueta "Sin iniciar" (sigue seleccionable)
+#   Alt. último tema visitado → resaltado como "Continuar en…"
 #   Alt. cancelar → "Volver" regresa al menú sin cambios
 #
-# Postcondición: ningún dato del progreso se modifica (solo se guarda la última materia).
+# Postcondición: ningún dato del progreso se modifica (solo se guarda el último tema).
 extends Control
 
 const RUTA_MENU := "res://scenes/menu/Menu.tscn"
@@ -28,20 +28,20 @@ func _ready() -> void:
 func _construir_catalogo() -> void:
 	for hijo in %Lista.get_children():
 		hijo.queue_free()
-	var catalogo := JuegoRepository.obtener_catalogo_materias()
-	var dominadas := 0
+	var catalogo := JuegoRepository.obtener_catalogo_temas()
+	var dominados := 0
 	for fila in catalogo:
-		if fila["dominada"]:
-			dominadas += 1
+		if fila["dominado"]:
+			dominados += 1
 		%Lista.add_child(_crear_tarjeta(fila))
-	if dominadas > 0:
-		%LblSub.text = "Has dominado %d de %d materias. Cada materia tiene su propio mapa de módulos." % [dominadas, catalogo.size()]
+	if dominados > 0:
+		%LblSub.text = "Has dominado %d de %d temas. Cada tema tiene su mapa: dos quizzes, un puzzle y la práctica de ingeniero." % [dominados, catalogo.size()]
 
 
-## Tarjeta de una materia: icono de color, nombre, avance, barra y etiqueta de estado.
+## Tarjeta de un tema: icono de color, nombre, avance, barra y etiqueta de estado.
 func _crear_tarjeta(f: Dictionary) -> Control:
 	var color := Color(f["color"])
-	var es_ultima: bool = f["es_ultima"]
+	var es_ultima: bool = f["es_ultimo"]
 	var sin_iniciar: bool = f["sin_iniciar"]
 
 	var tarjeta := PanelContainer.new()
@@ -55,8 +55,8 @@ func _crear_tarjeta(f: Dictionary) -> Control:
 	# --- Etiqueta superior: "Continuar en…" / "Sin iniciar" / "Dominada" ---
 	var etiqueta := Label.new()
 	etiqueta.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if f["dominada"]:
-		etiqueta.text = "MATERIA DOMINADA"
+	if f["dominado"]:
+		etiqueta.text = "TEMA DOMINADO"
 		etiqueta.theme_type_variation = &"EtiquetaVerde"
 	elif es_ultima and not sin_iniciar:
 		etiqueta.text = "CONTINUAR EN…"
@@ -128,11 +128,11 @@ func _crear_tarjeta(f: Dictionary) -> Control:
 	avance.add_child(lbl_avance)
 
 	var chip := PanelContainer.new()
-	chip.theme_type_variation = &"ChipGris" if sin_iniciar else (&"ChipVerde" if f["dominada"] else &"Chip")
+	chip.theme_type_variation = &"ChipGris" if sin_iniciar else (&"ChipVerde" if f["dominado"] else &"Chip")
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var pct := Label.new()
 	pct.text = "%d %%" % int(f["porcentaje"])
-	pct.theme_type_variation = &"TextoVerde" if f["dominada"] else (&"Pequeno" if sin_iniciar else &"TextoAzul")
+	pct.theme_type_variation = &"TextoVerde" if f["dominado"] else (&"Pequeno" if sin_iniciar else &"TextoAzul")
 	pct.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_child(pct)
 	avance.add_child(chip)
@@ -152,12 +152,12 @@ func _crear_tarjeta(f: Dictionary) -> Control:
 	# --- Botón invisible que cubre toda la tarjeta (paso 3) ---
 	var btn := Button.new()
 	btn.theme_type_variation = &"BotonInvisible"
-	btn.pressed.connect(_on_materia_presionada.bind(int(f["id"])))
+	btn.pressed.connect(_on_tema_presionado.bind(int(f["id"])))
 	tarjeta.add_child(btn)
 	return tarjeta
 
 
 # ============================ PASOS 3-4: ABRIR EL MAPA ============================
-func _on_materia_presionada(id_materia: int) -> void:
-	JuegoRepository.seleccionar_materia(id_materia)
+func _on_tema_presionado(id_tema: int) -> void:
+	JuegoRepository.seleccionar_tema(id_tema)
 	get_tree().change_scene_to_file(RUTA_MAPA)

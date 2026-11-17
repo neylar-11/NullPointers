@@ -33,9 +33,8 @@ func _ready() -> void:
 
 # ============================ PASO 3: CONCEPTO ============================
 func _mostrar_concepto(c: Dictionary) -> void:
-	var modulo := JuegoRepository.obtener_modulo(int(c["id_modulo"]))
-	var nombre_modulo: String = modulo.get("nombre", "")
-	%LblEtiqueta.text = ("CONCEPTO · MÓDULO %d · %s" % [int(c["id_modulo"]), nombre_modulo]).to_upper()
+	var tema := JuegoRepository.obtener_tema(int(c.get("id_tema", 1)))
+	%LblEtiqueta.text = ("CONCEPTO · TEMA %d · %s" % [int(c.get("id_tema", 1)), tema.get("corto", "")]).to_upper()
 	%LblTitulo.text = c["titulo"]
 	%LblExplicacion.text = c["explicacion"]
 	%LblTruco.text = "Truco rápido: " + c["truco"]
