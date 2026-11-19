@@ -31,7 +31,7 @@
 
 extends Node
 
-const RUTA_BD := "user://nullpointers_bd.json"
+var ruta_bd := "user://nullpointers_bd.json"   # variable para que las pruebas usen user://test_bd.json
 const ESQUEMA := 5                   # versión del esquema de la BD (Sprint 3 · temas + niveles de insignias)
 const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mockups / CU-03)
 const PREGUNTAS_POR_QUIZ := 5        # preguntas que sortea cada intento de quiz
@@ -66,11 +66,13 @@ func _ready() -> void:
 #  PERSISTENCIA (RNF-02: no perder progreso ante cierres inesperados)
 # =====================================================================
 func cargar_bd() -> void:
-	if FileAccess.file_exists(RUTA_BD):
-		var archivo := FileAccess.open(RUTA_BD, FileAccess.READ)
-		var datos = JSON.parse_string(archivo.get_as_text())
-		archivo.close()
+	# Si el archivo principal está dañado (p. ej. la app se cerró a la mitad de una
+	# escritura), se intenta con la copia de respaldo antes de empezar de cero (RNF-02).
+	for ruta in [ruta_bd, ruta_bd + ".bak"]:
+		var datos = _leer_bd(ruta)
 		if datos is Dictionary and datos.has("modulos"):
+			if ruta != ruta_bd:
+				push_warning("BD principal dañada; se recuperó la copia de respaldo")
 			if int(datos.get("esquema", 1)) < 4:
 				bd = _migrar_a_temas(datos)      # BD de Sprint 1, 2 o 3 (materias)
 			else:
@@ -81,14 +83,40 @@ func cargar_bd() -> void:
 			_evaluar_avatares()
 			guardar_bd()
 			return
-	# Primera vez (o archivo corrupto): crear BD inicial
+	# Primera vez (o archivo y respaldo dañados): crear BD inicial
 	bd = _bd_inicial()
 	guardar_bd()
 
+func _leer_bd(ruta: String) -> Variant:
+	if not FileAccess.file_exists(ruta):
+		return null
+	var archivo := FileAccess.open(ruta, FileAccess.READ)
+	if archivo == null:
+		return null
+	var texto := archivo.get_as_text()
+	archivo.close()
+	return JSON.parse_string(texto)
+
+## Escritura segura (RNF-02): se escribe a un archivo temporal y luego se reemplaza
+## el principal, así un cierre a la mitad nunca deja el archivo principal a medias.
+## La versión anterior queda como respaldo (.bak) para cargar_bd().
 func guardar_bd() -> void:
-	var archivo := FileAccess.open(RUTA_BD, FileAccess.WRITE)
+	var temporal := ruta_bd + ".tmp"
+	var archivo := FileAccess.open(temporal, FileAccess.WRITE)
+	if archivo == null:
+		push_error("No se pudo guardar el progreso (%s)" % error_string(FileAccess.get_open_error()))
+		return
 	archivo.store_string(JSON.stringify(bd, "\t"))
 	archivo.close()
+	if FileAccess.file_exists(ruta_bd):
+		DirAccess.copy_absolute(ruta_bd, ruta_bd + ".bak")
+	if DirAccess.rename_absolute(temporal, ruta_bd) != OK:
+		# Si la plataforma no permite reemplazar con rename, se escribe directo
+		var directo := FileAccess.open(ruta_bd, FileAccess.WRITE)
+		if directo != null:
+			directo.store_string(JSON.stringify(bd, "\t"))
+			directo.close()
+		DirAccess.remove_absolute(temporal)
 
 ## Borra todo el progreso (útil para pruebas del Líder de Calidad).
 func reiniciar_bd() -> void:
@@ -162,7 +190,10 @@ func _migrar_a_temas(vieja: Dictionary) -> Dictionary:
 		var quiz1 := obtener_modulo_en(nueva, id_viejo * 100 + 1)
 		if quiz1.is_empty():
 			continue
-		quiz1["estado"] = m_vieja.get("estado", "bloqueado")
+		# En el esquema por temas el Quiz I de cada tema siempre inicia desbloqueado:
+		# un módulo viejo "bloqueado" no debe bloquear el tema (no hay módulo previo que lo abra).
+		var estado_viejo := str(m_vieja.get("estado", "desbloqueado"))
+		quiz1["estado"] = "completado" if estado_viejo == "completado" else "desbloqueado"
 		quiz1["mejor_puntaje"] = int(m_vieja.get("mejor_puntaje", -1))
 		quiz1["puntos_obtenidos"] = int(m_vieja.get("puntos_obtenidos", 0))
 		if quiz1["estado"] == "completado":
@@ -489,18 +520,26 @@ func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pis
 	var mejor_previo := int(modulo["mejor_puntaje"])          # -1 = sin intentos
 	var puntos_previos := int(modulo["puntos_obtenidos"])
 
-	# 1) Guardar el intento en la tabla intentos_modulo
-	bd["intentos_modulo"].append({
-		"id": bd["intentos_modulo"].size() + 1,
-		"id_modulo": id_modulo,
-		"fecha": Time.get_datetime_string_from_system(),
-		"aciertos": aciertos,
-		"total": total_preguntas,
-		"porcentaje": porcentaje,
-		"puntos": puntos,
-		"completado": completado,
-		"pistas": pistas,                 # CU-10: postcondición "el intento registra las pistas usadas"
-	})
+	# 0) Contadores de retos terminados para las insignias (Constante, Puntería, Armador,
+	#    Sin ayuda): cuentan todos los retos terminados, se guarde o no el intento.
+	_contar_reto(modulo, porcentaje, completado, pistas)
+
+	# 1) Guardar el intento en la tabla intentos_modulo. CU-03 alt. 4: al rejugar un módulo
+	#    ya completado, el intento solo se guarda si supera al mejor anterior (DEF-01).
+	var ya_completado: bool = modulo["estado"] == "completado"
+	var guardado := not (ya_completado and porcentaje <= mejor_previo)
+	if guardado:
+		bd["intentos_modulo"].append({
+			"id": bd["intentos_modulo"].size() + 1,
+			"id_modulo": id_modulo,
+			"fecha": Time.get_datetime_string_from_system(),
+			"aciertos": aciertos,
+			"total": total_preguntas,
+			"porcentaje": porcentaje,
+			"puntos": puntos,
+			"completado": completado,
+			"pistas": pistas,                 # CU-10: postcondición "el intento registra las pistas usadas"
+		})
 
 	# 2) Conservar el mejor puntaje ("Se conserva tu mejor puntaje")
 	var puntos_sumados := 0
@@ -540,11 +579,13 @@ func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pis
 		"completado": completado,
 		"mejor_previo": mejor_previo,
 		"es_mejor": porcentaje > mejor_previo,
+		"guardado": guardado,
 		"puntos_sumados": puntos_sumados,
 		"puntos_totales": obtener_puntos_totales(),
 		"siguiente_desbloqueado": siguiente_desbloqueado,
 		"insignias_nuevas": insignias_nuevas,
 		"practica_desbloqueada": practica_desbloqueada,
+		"intentos": obtener_intentos(id_modulo).size(),     # la pantalla de resultados muestra "Intento N"
 	}
 
 
@@ -737,22 +778,43 @@ func medallas_en_nivel(nivel: int) -> int:
 	return n
 
 ## Todas las cifras del progreso que alimentan las insignias y los avatares.
+## Cuenta un reto terminado para las insignias, aunque el intento no se guarde (CU-03 alt. 4).
+func _contar_reto(modulo: Dictionary, porcentaje: int, completado: bool, pistas: int) -> void:
+	var c: Dictionary = _contadores()
+	c["terminados"] = int(c["terminados"]) + 1
+	if porcentaje >= 100:
+		c["perfectos"] = int(c["perfectos"]) + 1
+		if modulo["tipo"] == "puzzle":
+			c["puzzles_perfectos"] = int(c["puzzles_perfectos"]) + 1
+	if completado and pistas == 0 and not (c["sin_pistas"] as Array).has(int(modulo["id"])):
+		(c["sin_pistas"] as Array).append(int(modulo["id"]))
+
+## Contadores de retos; si no existen (BD de una versión anterior) se calculan de los intentos guardados.
+func _contadores() -> Dictionary:
+	if not bd.has("contadores"):
+		var c := {"terminados": 0, "perfectos": 0, "puzzles_perfectos": 0, "sin_pistas": []}
+		for i in bd["intentos_modulo"]:
+			var m := obtener_modulo(int(i["id_modulo"]))
+			c["terminados"] += 1
+			if int(i["porcentaje"]) >= 100:
+				c["perfectos"] += 1
+				if not m.is_empty() and m["tipo"] == "puzzle":
+					c["puzzles_perfectos"] += 1
+			if bool(i["completado"]) and int(i.get("pistas", 0)) == 0 and not c["sin_pistas"].has(int(i["id_modulo"])):
+				c["sin_pistas"].append(int(i["id_modulo"]))
+		bd["contadores"] = c
+	return bd["contadores"]
+
 func _metricas() -> Dictionary:
 	var intentos: Array = bd["intentos_modulo"]
-	var perfectos := 0            # intentos con 100 %
-	var puzzles_perfectos := 0    # intentos con 100 % en módulos puzzle
-	var sin_pistas_mods := {}     # módulos completados sin pistas (distintos)
+	var c := _contadores()
+	var perfectos := int(c["perfectos"])                  # retos terminados con 100 %
+	var puzzles_perfectos := int(c["puzzles_perfectos"])  # retos con 100 % en módulos puzzle
+	var sin_pistas_mods: Array = c["sin_pistas"]          # módulos completados sin pistas (distintos)
 	var primer_intento := 0       # módulos completados al primer intento
 	var vistos := {}
 	for i in intentos:
 		var id_mod := int(i["id_modulo"])
-		var m := obtener_modulo(id_mod)
-		if int(i["porcentaje"]) >= 100:
-			perfectos += 1
-			if not m.is_empty() and m["tipo"] == "puzzle":
-				puzzles_perfectos += 1
-		if bool(i["completado"]) and int(i.get("pistas", 0)) == 0:
-			sin_pistas_mods[id_mod] = true
 		if not vistos.has(id_mod):
 			vistos[id_mod] = true
 			if bool(i["completado"]):
@@ -786,7 +848,7 @@ func _metricas() -> Dictionary:
 		"sin_pistas": sin_pistas_mods.size(),
 		"primer_intento": primer_intento,
 		"teoria": int(bd.get("teoria_consultas", 0)),
-		"intentos": intentos.size(),
+		"intentos": int(c["terminados"]),
 		"corregidas": corregidas,
 		"analista": analista,
 		"oros": oros,
@@ -1026,6 +1088,7 @@ func _bd_inicial() -> Dictionary:
 			"fecha_creacion": Time.get_datetime_string_from_system(),
 		},
 		"teoria_consultas": 0,
+		"contadores": {"terminados": 0, "perfectos": 0, "puzzles_perfectos": 0, "sin_pistas": []},
 		# ---- CU-08: temas de la materia Introducción a la Ingeniería de Software ----
 		"temas": [
 			_tema(1, "Fundamentos de la ingeniería de software", "Fundamentos",
