@@ -545,6 +545,7 @@ func registrar_intento(id_modulo: int, aciertos: int, puntos_reto: int = -1, pis
 		"siguiente_desbloqueado": siguiente_desbloqueado,
 		"insignias_nuevas": insignias_nuevas,
 		"practica_desbloqueada": practica_desbloqueada,
+		"intentos": obtener_intentos(id_modulo).size(),     # la pantalla de resultados muestra "Intento N"
 	}
 
 
