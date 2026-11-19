@@ -13,56 +13,52 @@ func before_each():
 
 func after_each():
 	repo.free()
-	DirAccess.remove_absolute("user://test_bd.json")
+	for sufijo in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_bd.json" + sufijo))
 
-# Completa los módulos de una materia con 5/5 aciertos
-func completar_materia(id_materia: int) -> void:
-	for m in repo.obtener_modulos_materia(id_materia):
-		repo.registrar_intento(int(m["id"]), 5)
+# Completa con 100 % todos los módulos de un tema
+func completar_tema(id_tema: int) -> void:
+	for m in repo.obtener_modulos_tema(id_tema):
+		repo.registrar_intento(int(m["id"]), int(m["num_preguntas"]), -1, 0, int(m["num_preguntas"]))
 
 
-# UT-10-01: costo de cada tipo de pista (regla del CU-10)
+func rid(tema: int, k: int = 0) -> int:
+	return int(repo.obtener_reactivos_tema(tema)[k]["id"])
+
+# UT-10-01: costo de cada pista
 func test_costo_de_pistas():
 	assert_eq(repo.costo_pista("recordar"), 0.25)
 	assert_eq(repo.costo_pista("descartar"), 0.50)
-	assert_eq(repo.costo_pista("otra"), 0.0, "Un tipo desconocido no cuesta")
+	assert_eq(repo.costo_pista("otra"), 0.0)
 
-
-# UT-10-02: «Descartar» nunca elimina la respuesta correcta
+# UT-10-02: "Descartar" nunca elimina la respuesta correcta, en ninguna pregunta del banco
 func test_opcion_a_descartar_nunca_es_la_correcta():
-	var correcta = int(repo.obtener_reactivo(1)["respuesta_correcta"])
-	for i in 30:
-		var d = repo.opcion_a_descartar(1)
-		assert_ne(d, correcta, "No debe descartar la respuesta correcta")
-		assert_between(d, 0, 3)
+	for r in repo.bd["reactivos"]:
+		var d = repo.opcion_a_descartar(int(r["id"]))
+		assert_ne(d, int(r["respuesta_correcta"]))
+		assert_between(d, 0, r["opciones"].size() - 1)
 
-
-# UT-10-03: pregunta de dos opciones no permite descartar (CU-10 flujo alterno 3)
+# UT-10-03: con dos opciones no se puede descartar (alt. 3)
 func test_opcion_a_descartar_con_dos_opciones_regresa_menos_uno():
-	repo.obtener_reactivo(1)["opciones"] = ["Sí", "No"]
-	assert_eq(repo.opcion_a_descartar(1), -1)
+	repo.obtener_reactivo(rid(1))["opciones"] = ["Sí", "No"]
+	assert_eq(repo.opcion_a_descartar(rid(1)), -1)
 
-
-# UT-10-04: «Recordar el concepto» da texto; sin concepto da vacío (CU-10 flujo alterno 2)
+# UT-10-04: "Recordar el concepto" da texto; sin concepto da vacío (alt. 2)
 func test_texto_pista_concepto():
-	assert_ne(repo.texto_pista_concepto(1), "", "El reactivo 1 tiene concepto")
-	repo.obtener_reactivo(1)["id_concepto"] = ""
-	assert_eq(repo.texto_pista_concepto(1), "")
+	assert_ne(repo.texto_pista_concepto(rid(1)), "")
+	repo.obtener_reactivo(rid(1))["id_concepto"] = ""
+	assert_eq(repo.texto_pista_concepto(rid(1)), "")
 
-
-# UT-10-05: los puntos del intento reflejan el descuento por pistas (postcondición del CU-10)
+# UT-10-05: los puntos del intento reflejan los descuentos y se guardan las pistas (postcondición)
 func test_registrar_intento_con_pistas_descuenta_puntos_y_las_guarda():
-	# Ejecutar: 5/5 pero con 75 puntos tras pistas
-	var r = repo.registrar_intento(1, 5, 75, 2)
-	# Verificar
+	var r = repo.registrar_intento(101, 5, 75, 2)
 	assert_eq(r["puntos"], 75)
 	assert_eq(repo.obtener_puntos_totales(), 75)
-	assert_eq(int(repo.obtener_intentos(1)[0]["pistas"]), 2, "El intento registra las pistas usadas")
+	assert_eq(int(repo.obtener_intentos(101)[0]["pistas"]), 2)
 
-
-# UT-10-06: completar sin pistas otorga «Sin ayuda»; con pistas no
+# UT-10-06: completar un módulo sin pistas da "Sin ayuda"; con pistas no
 func test_insignia_sin_ayuda():
-	var r = repo.registrar_intento(1, 5, 75, 1)
+	var r = repo.registrar_intento(101, 5, 75, 1)
 	assert_does_not_have(r["insignias_nuevas"].map(func(i): return i["id"]), "sin_pistas")
-	r = repo.registrar_intento(2, 5)
+	r = repo.registrar_intento(201, 5)
 	assert_has(r["insignias_nuevas"].map(func(i): return i["id"]), "sin_pistas")

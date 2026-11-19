@@ -13,31 +13,41 @@ func before_each():
 
 func after_each():
 	repo.free()
-	DirAccess.remove_absolute("user://test_bd.json")
+	for sufijo in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_bd.json" + sufijo))
 
-func _buscar_insignia(id: String) -> Dictionary:
-	for ins in repo.obtener_insignias():
-		if ins["id"] == id:
-			return ins
-	return {}
-
-
-# UT-05-01: catálogo inicial de 12 insignias (9 + 3 del Sprint 3), ninguna obtenida (RF-05)
-func test_obtener_insignias_inicial_12_y_ninguna_obtenida():
-	assert_eq(repo.obtener_insignias().size(), 12, "Deben existir 12 insignias")
-	assert_eq(repo.insignias_obtenidas(), 0, "Al inicio no hay insignias obtenidas")
+# Completa con 100 % todos los módulos de un tema
+func completar_tema(id_tema: int) -> void:
+	for m in repo.obtener_modulos_tema(id_tema):
+		repo.registrar_intento(int(m["id"]), int(m["num_preguntas"]), -1, 0, int(m["num_preguntas"]))
 
 
-# UT-05-02: completar el primer módulo otorga "primer_paso" (RF-05)
-func test_registrar_intento_completado_otorga_primer_paso():
-	repo.registrar_intento(1, 4)
-	var ins = _buscar_insignia("primer_paso")
-	assert_true(ins["obtenida"], "La insignia primer_paso debe quedar obtenida")
-	assert_ne(ins["fecha_obtencion"], "", "Debe registrar la fecha de obtención")
+# UT-05-01: catálogo inicial de 24 insignias (12 de logro + 12 medallas de tema), ninguna obtenida
+func test_catalogo_inicial_24_insignias_ninguna_obtenida():
+	assert_eq(repo.obtener_insignias().size(), 24)
+	assert_eq(repo.obtener_insignias_tipo("logro").size(), 12)
+	assert_eq(repo.obtener_insignias_tipo("tema").size(), 12)
+	assert_eq(repo.insignias_obtenidas(), 0)
 
+# UT-05-02: completar el primer módulo da "Primer paso" en bronce, con fecha
+func test_completar_primer_modulo_otorga_primer_paso_bronce():
+	var r = repo.registrar_intento(101, 4)
+	var ids = r["insignias_nuevas"].map(func(i): return i["id"])
+	assert_has(ids, "primer_paso")
+	for i in repo.obtener_insignias():
+		if i["id"] == "primer_paso":
+			assert_eq(int(i["nivel"]), 1)
+			assert_ne(str(i["fecha"]), "")
 
-# UT-05-03: 5 consultas de teoría otorgan "estudioso" (RF-05)
+# UT-05-03: 5 consultas de teoría dan "Estudioso"
 func test_registrar_consulta_teoria_5_veces_otorga_estudioso():
-	for i in 5:
+	for k in 5:
 		repo.registrar_consulta_teoria()
-	assert_true(_buscar_insignia("estudioso")["obtenida"], "La insignia estudioso debe quedar obtenida")
+	assert_true(repo.obtener_insignias().any(func(i): return i["id"] == "estudioso" and i["obtenida"]))
+
+# UT-05-04: la medalla de un tema sube a oro con 100 % de promedio en sus tres módulos
+func test_medalla_de_tema_en_oro_con_100_en_los_tres_modulos():
+	completar_tema(4)
+	for i in repo.obtener_insignias_tipo("tema"):
+		if int(i["id_tema"]) == 4:
+			assert_eq(int(i["nivel"]), 3, "Oro")

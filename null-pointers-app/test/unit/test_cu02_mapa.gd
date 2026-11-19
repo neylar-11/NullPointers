@@ -1,5 +1,5 @@
 # res://test/unit/test_cu02_mapa.gd
-# Pruebas unitarias del CU-02 Seleccionar módulo de aprendizaje (RF-02)
+# Pruebas unitarias del CU-02 Elegir módulo (RF-02)
 extends GutTest
 
 const Repo = preload("res://autoload/JuegoRepository.gd")
@@ -13,23 +13,24 @@ func before_each():
 
 func after_each():
 	repo.free()
-	DirAccess.remove_absolute("user://test_bd.json")
+	for sufijo in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_bd.json" + sufijo))
+
+# Completa con 100 % todos los módulos de un tema
+func completar_tema(id_tema: int) -> void:
+	for m in repo.obtener_modulos_tema(id_tema):
+		repo.registrar_intento(int(m["id"]), int(m["num_preguntas"]), -1, 0, int(m["num_preguntas"]))
 
 
-# UT-02-01: estado inicial del mapa (RF-02). Sprint 3 (CU-08): 14 módulos en 3 materias;
-# solo el primer módulo de cada materia (1, 9 y 12) inicia desbloqueado.
-func test_obtener_modulos_inicial_solo_el_primero_de_cada_materia_desbloqueado():
-	var modulos = repo.obtener_modulos()
-	assert_eq(modulos.size(), 14, "Deben existir 14 módulos (8 + 3 + 3)")
-	var primeros := [1, 9, 12]
-	for m in modulos:
-		var esperado = "desbloqueado" if int(m["id"]) in primeros else "bloqueado"
-		assert_eq(m["estado"], esperado, "El módulo %d debe iniciar %s" % [m["id"], esperado])
-	assert_eq(repo.obtener_modulos_materia(1).size(), 8, "La materia 1 conserva sus 8 módulos")
+# UT-02-01: cada tema tiene Quiz I, Quiz II y Puzzle; solo el Quiz I inicia desbloqueado
+func test_mapa_de_cada_tema_inicia_con_solo_el_quiz_i_desbloqueado():
+	assert_eq(repo.obtener_modulos().size(), 36, "12 temas × 3 módulos")
+	for t in repo.obtener_temas():
+		var mods = repo.obtener_modulos_tema(int(t["id"]))
+		assert_eq(mods.size(), 3, "Tema %s con 3 módulos" % t["id"])
+		assert_eq(mods.map(func(m): return m["tipo"]), ["quiz", "quiz", "puzzle"])
+		assert_eq(mods.map(func(m): return m["estado"]), ["desbloqueado", "bloqueado", "bloqueado"])
 
-
-# UT-02-02: el siguiente módulo a jugar al inicio es el 1 (RF-02)
-func test_siguiente_modulo_inicial_es_el_1():
-	var siguiente = repo.siguiente_modulo()
-	assert_false(siguiente.is_empty(), "Debe haber un módulo disponible")
-	assert_eq(int(siguiente["id"]), 1)
+# UT-02-02: el siguiente módulo jugable de un tema nuevo es su Quiz I
+func test_siguiente_modulo_de_un_tema_nuevo_es_su_quiz_i():
+	assert_eq(int(repo.siguiente_modulo_tema(3)["id"]), 301)

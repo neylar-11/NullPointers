@@ -13,36 +13,37 @@ func before_each():
 
 func after_each():
 	repo.free()
-	DirAccess.remove_absolute("user://test_bd.json")
+	for sufijo in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_bd.json" + sufijo))
+
+# Completa con 100 % todos los módulos de un tema
+func completar_tema(id_tema: int) -> void:
+	for m in repo.obtener_modulos_tema(id_tema):
+		repo.registrar_intento(int(m["id"]), int(m["num_preguntas"]), -1, 0, int(m["num_preguntas"]))
 
 
-# UT-04-01: un reactivo con concepto devuelve su teoría (RF-04)
-func test_obtener_concepto_de_reactivo_8_devuelve_req_no_funcional():
-	var c = repo.obtener_concepto(8)
-	assert_false(c.is_empty(), "El reactivo 8 tiene concepto asociado")
-	assert_eq(c["id"], "req_no_funcional")
-	assert_true(c.has("titulo") and c["titulo"] != "", "Debe tener título")
-	assert_true(c.has("explicacion") and c["explicacion"] != "", "Debe tener explicación")
+# UT-04-01: toda pregunta del banco tiene un concepto de su mismo tema
+func test_cada_reactivo_tiene_concepto_de_su_tema():
+	for r in repo.bd["reactivos"]:
+		var c = repo.obtener_concepto(int(r["id"]))
+		assert_false(c.is_empty(), "Reactivo %s sin concepto" % r["id"])
+		if not c.is_empty():
+			assert_eq(int(c["id_tema"]), int(r["id_tema"]))
+			assert_ne(str(c["titulo"]), "")
+			assert_ne(str(c["explicacion"]), "")
 
-
-# UT-04-02: reactivo sin concepto devuelve vacío (CU-04 flujo alterno)
+# UT-04-02: sin concepto asociado regresa vacío (CU-04 alt.)
 func test_obtener_concepto_sin_concepto_devuelve_vacio():
-	# Preparar
-	repo.bd["reactivos"][0]["id_concepto"] = ""
-	# Ejecutar
-	var c = repo.obtener_concepto(1)
-	# Verificar
-	assert_true(c.is_empty(), "Sin concepto asociado debe regresar un diccionario vacío")
+	var r = repo.bd["reactivos"][0]
+	r["id_concepto"] = ""
+	assert_true(repo.obtener_concepto(int(r["id"])).is_empty())
 
-
-# UT-04-03: consultar la teoría no cambia puntos ni intentos (CU-04 postcondición)
+# UT-04-03: consultar la teoría no altera puntos ni intentos (postcondición)
 func test_registrar_consulta_teoria_no_altera_puntos_ni_intentos():
-	# Preparar
-	repo.registrar_intento(1, 3)
-	var puntos_antes = repo.obtener_puntos_totales()
-	var intentos_antes = repo.obtener_intentos(1).size()
-	# Ejecutar
+	repo.registrar_intento(101, 3)
+	var puntos = repo.obtener_puntos_totales()
+	var intentos = repo.bd["intentos_modulo"].size()
 	repo.registrar_consulta_teoria()
-	# Verificar
-	assert_eq(repo.obtener_puntos_totales(), puntos_antes, "Los puntos no deben cambiar")
-	assert_eq(repo.obtener_intentos(1).size(), intentos_antes, "Los intentos no deben cambiar")
+	assert_eq(repo.obtener_puntos_totales(), puntos)
+	assert_eq(repo.bd["intentos_modulo"].size(), intentos)
+	assert_eq(int(repo.bd["teoria_consultas"]), 1)
