@@ -31,7 +31,7 @@
 
 extends Node
 
-const RUTA_BD := "user://nullpointers_bd.json"
+var ruta_bd := "user://nullpointers_bd.json"   # variable para que las pruebas usen user://test_bd.json
 const ESQUEMA := 5                   # versión del esquema de la BD (Sprint 3 · temas + niveles de insignias)
 const PORCENTAJE_MINIMO := 70        # % necesario para completar un módulo (mockups / CU-03)
 const PREGUNTAS_POR_QUIZ := 5        # preguntas que sortea cada intento de quiz
@@ -66,11 +66,13 @@ func _ready() -> void:
 #  PERSISTENCIA (RNF-02: no perder progreso ante cierres inesperados)
 # =====================================================================
 func cargar_bd() -> void:
-	if FileAccess.file_exists(RUTA_BD):
-		var archivo := FileAccess.open(RUTA_BD, FileAccess.READ)
-		var datos = JSON.parse_string(archivo.get_as_text())
-		archivo.close()
+	# Si el archivo principal está dañado (p. ej. la app se cerró a la mitad de una
+	# escritura), se intenta con la copia de respaldo antes de empezar de cero (RNF-02).
+	for ruta in [ruta_bd, ruta_bd + ".bak"]:
+		var datos = _leer_bd(ruta)
 		if datos is Dictionary and datos.has("modulos"):
+			if ruta != ruta_bd:
+				push_warning("BD principal dañada; se recuperó la copia de respaldo")
 			if int(datos.get("esquema", 1)) < 4:
 				bd = _migrar_a_temas(datos)      # BD de Sprint 1, 2 o 3 (materias)
 			else:
@@ -81,14 +83,40 @@ func cargar_bd() -> void:
 			_evaluar_avatares()
 			guardar_bd()
 			return
-	# Primera vez (o archivo corrupto): crear BD inicial
+	# Primera vez (o archivo y respaldo dañados): crear BD inicial
 	bd = _bd_inicial()
 	guardar_bd()
 
+func _leer_bd(ruta: String) -> Variant:
+	if not FileAccess.file_exists(ruta):
+		return null
+	var archivo := FileAccess.open(ruta, FileAccess.READ)
+	if archivo == null:
+		return null
+	var texto := archivo.get_as_text()
+	archivo.close()
+	return JSON.parse_string(texto)
+
+## Escritura segura (RNF-02): se escribe a un archivo temporal y luego se reemplaza
+## el principal, así un cierre a la mitad nunca deja el archivo principal a medias.
+## La versión anterior queda como respaldo (.bak) para cargar_bd().
 func guardar_bd() -> void:
-	var archivo := FileAccess.open(RUTA_BD, FileAccess.WRITE)
+	var temporal := ruta_bd + ".tmp"
+	var archivo := FileAccess.open(temporal, FileAccess.WRITE)
+	if archivo == null:
+		push_error("No se pudo guardar el progreso (%s)" % error_string(FileAccess.get_open_error()))
+		return
 	archivo.store_string(JSON.stringify(bd, "\t"))
 	archivo.close()
+	if FileAccess.file_exists(ruta_bd):
+		DirAccess.copy_absolute(ruta_bd, ruta_bd + ".bak")
+	if DirAccess.rename_absolute(temporal, ruta_bd) != OK:
+		# Si la plataforma no permite reemplazar con rename, se escribe directo
+		var directo := FileAccess.open(ruta_bd, FileAccess.WRITE)
+		if directo != null:
+			directo.store_string(JSON.stringify(bd, "\t"))
+			directo.close()
+		DirAccess.remove_absolute(temporal)
 
 ## Borra todo el progreso (útil para pruebas del Líder de Calidad).
 func reiniciar_bd() -> void:
