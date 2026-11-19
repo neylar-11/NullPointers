@@ -51,3 +51,10 @@ func test_medalla_de_tema_en_oro_con_100_en_los_tres_modulos():
 	for i in repo.obtener_insignias_tipo("tema"):
 		if int(i["id_tema"]) == 4:
 			assert_eq(int(i["nivel"]), 3, "Oro")
+
+# UT-05-05: "Constante" cuenta todos los retos terminados, aunque el intento no se guarde (CU-03 alt. 4)
+func test_constante_cuenta_retos_aunque_no_se_guarden():
+	for k in 10:
+		repo.registrar_intento(101, 5)
+	assert_eq(repo.obtener_intentos(101).size(), 1, "Solo se guarda el primer 100 %")
+	assert_true(repo.obtener_insignias().any(func(i): return i["id"] == "constante" and i["obtenida"]))

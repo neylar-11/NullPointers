@@ -45,11 +45,26 @@ func test_registrar_intento_peor_conserva_mejor_puntaje():
 	assert_eq(int(repo.obtener_modulo(101)["mejor_puntaje"]), 100)
 
 # UT-03-04: al rejugar un módulo completado, el intento que no mejora no se guarda (CU-03 alt. 4)
-# Se espera que FALLE: defecto DEF-01 (ver Casos de Prueba V3.0).
+# Detectó DEF-01 en el Sprint 2; corregido en el Sprint 3.
 func test_registrar_intento_que_no_mejora_no_se_guarda():
 	repo.registrar_intento(101, 5)
-	repo.registrar_intento(101, 4)
+	var r = repo.registrar_intento(101, 4)
+	assert_false(r["guardado"])
 	assert_eq(repo.obtener_intentos(101).size(), 1)
+
+# UT-03-08: rejugar un módulo completado y mejorar sí guarda el intento (CU-03 alt. 4)
+func test_rejugar_y_mejorar_si_se_guarda():
+	repo.registrar_intento(101, 4)
+	var r = repo.registrar_intento(101, 5)
+	assert_true(r["guardado"])
+	assert_eq(repo.obtener_intentos(101).size(), 2)
+	assert_eq(int(repo.obtener_modulo(101)["mejor_puntaje"]), 100)
+
+# UT-03-09: un módulo no completado guarda todos sus intentos (la regla solo aplica al rejugar uno completado)
+func test_modulo_no_completado_guarda_todos_los_intentos():
+	repo.registrar_intento(101, 2)
+	repo.registrar_intento(101, 1)
+	assert_eq(repo.obtener_intentos(101).size(), 2)
 
 # UT-03-05: cada quiz sortea 5 preguntas distintas del banco de su tema (RF-03)
 func test_sortear_reactivos_toma_5_del_tema_sin_repetir():
