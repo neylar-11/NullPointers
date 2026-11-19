@@ -237,7 +237,7 @@ func _mostrar_detalle(m: Dictionary) -> void:
 	if es_practica:
 		var desc: String = m["descripcion"]
 		if completado:
-			desc += " Materia dominada: si vuelves a jugar, el intento solo se guarda si supera tu mejor puntaje."
+			desc += " Tema dominado: si vuelves a jugar, el intento solo se guarda si supera tu mejor puntaje."
 		%LblDetDescripcion.text = desc
 	elif not completado:
 		var desc: String = m["descripcion"]
