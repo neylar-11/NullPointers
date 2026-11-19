@@ -190,7 +190,10 @@ func _migrar_a_temas(vieja: Dictionary) -> Dictionary:
 		var quiz1 := obtener_modulo_en(nueva, id_viejo * 100 + 1)
 		if quiz1.is_empty():
 			continue
-		quiz1["estado"] = m_vieja.get("estado", "bloqueado")
+		# En el esquema por temas el Quiz I de cada tema siempre inicia desbloqueado:
+		# un módulo viejo "bloqueado" no debe bloquear el tema (no hay módulo previo que lo abra).
+		var estado_viejo := str(m_vieja.get("estado", "desbloqueado"))
+		quiz1["estado"] = "completado" if estado_viejo == "completado" else "desbloqueado"
 		quiz1["mejor_puntaje"] = int(m_vieja.get("mejor_puntaje", -1))
 		quiz1["puntos_obtenidos"] = int(m_vieja.get("puntos_obtenidos", 0))
 		if quiz1["estado"] == "completado":
