@@ -428,6 +428,10 @@ func _terminar_reto() -> void:
 		%BtnReintentar.show()
 		%BtnVolverMapa.theme_type_variation = &"BotonSecundario"
 
+	# CU-03 alt. 4: al rejugar un módulo completado, avisar si el intento no se guardó
+	if not res.get("guardado", true):
+		%LblResDetalle.text += "\nEl intento no supera tu mejor puntaje, así que no se guarda."
+
 	# CU-10: el resumen indica cuántas pistas se usaron
 	if pistas_intento > 0:
 		%LblResDetalle.text += "\nPistas usadas: %d" % pistas_intento
