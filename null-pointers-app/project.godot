@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="NullPointersAPP"
-run/main_scene="res://scenes/menu/Menu.tscn"
+config/name="SoftPlay"
+run/main_scene="res://scenes/splash/Splash.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
