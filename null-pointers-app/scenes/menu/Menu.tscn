@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://bmytvq50c284i"]
+[gd_scene load_steps=5 format=3 uid="uid://bmytvq50c284i"]
 
 [ext_resource type="Script" path="res://scenes/menu/menu.gd" id="1_menu"]
 [ext_resource type="Script" path="res://assets/ui/Avatar.gd" id="2_avatar"]
 [ext_resource type="Script" path="res://assets/ui/Icono.gd" id="3_icono"]
+[ext_resource type="Script" path="res://assets/ui/Logo.gd" id="4_logo"]
 
 [node name="Menu" type="Control"]
 layout_mode = 3
@@ -36,6 +37,11 @@ theme_override_constants/margin_bottom = 40
 [node name="Columna" type="VBoxContainer" parent="Margen"]
 layout_mode = 2
 theme_override_constants/separation = 20
+
+[node name="Logo" type="Control" parent="Margen/Columna"]
+layout_mode = 2
+script = ExtResource("4_logo")
+tamano = 34
 
 [node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
 layout_mode = 2
