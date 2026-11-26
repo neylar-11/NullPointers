@@ -2,3 +2,4 @@
 # Compilados (se generan con Proyecto > Exportar)
 *.apk
 *.aab
+*.idsig
