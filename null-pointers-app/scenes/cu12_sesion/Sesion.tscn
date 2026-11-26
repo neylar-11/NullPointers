@@ -1,0 +1,439 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu12_sesion/sesion.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+[ext_resource type="Script" path="res://assets/ui/Logo.gd" id="logo"]
+
+[node name="Sesion" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Logo" type="Control" parent="Margen/Columna"]
+layout_mode = 2
+script = ExtResource("logo")
+tamano = 34
+
+[node name="LblTitulo" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "¿Quién va a jugar?"
+theme_type_variation = &"Titulo"
+autowrap_mode = 3
+
+[node name="LblSub" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Elige tu perfil para continuar con tu progreso, o crea uno nuevo. Cada perfil guarda sus propios puntos, insignias y avance."
+theme_type_variation = &"TextoSecundario"
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Lista" type="VBoxContainer" parent="Margen/Columna/Scroll"]
+layout_mode = 2
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="BtnNuevo" type="Button" parent="Margen/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Crear perfil nuevo"
+custom_minimum_size = Vector2(0, 64)
+
+[node name="LblAyuda" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "Mantén tu nombre de usuario y contraseña a la mano: sin ellos no podrás entrar a tu perfil."
+theme_type_variation = &"TextoTerciario"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PanelContrasena" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelContrasena"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelContrasena"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelContrasena/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelContrasena/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(640, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelContrasena/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="PanelContrasena/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "candado"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+fondo = Color(0.9333, 0.949, 1, 1)
+
+[node name="LblContraTitulo" type="Label" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Escribe tu contraseña"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblContraSub" type="Label" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Este perfil está protegido."
+theme_type_variation = &"TextoSecundario"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="FilaContra" type="HBoxContainer" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TxtContra" type="LineEdit" parent="PanelContrasena/MargenModal/Centro/Modal/Columna/FilaContra"]
+layout_mode = 2
+unique_name_in_owner = true
+placeholder_text = "4 a 8 dígitos"
+max_length = 8
+secret = true
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 64)
+virtual_keyboard_type = 2
+
+[node name="BtnOjo" type="Button" parent="PanelContrasena/MargenModal/Centro/Modal/Columna/FilaContra"]
+layout_mode = 2
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+theme_type_variation = &"BotonSecundario"
+
+[node name="Icono" type="Control" parent="PanelContrasena/MargenModal/Centro/Modal/Columna/FilaContra/BtnOjo"]
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "ojo"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = 12.0
+
+[node name="LblContraError" type="Label" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Contraseña incorrecta. Inténtalo de nuevo."
+theme_type_variation = &"TextoNaranjaNormal"
+horizontal_alignment = 1
+autowrap_mode = 3
+visible = false
+
+[node name="BtnEntrar" type="Button" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Entrar"
+custom_minimum_size = Vector2(0, 60)
+
+[node name="BtnCancelarContra" type="Button" parent="PanelContrasena/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Cancelar"
+theme_type_variation = &"BotonPlano"
+
+[node name="PanelNuevo" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelNuevo"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelNuevo"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelNuevo/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelNuevo/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(640, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelNuevo/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="PanelNuevo/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "usuario"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+fondo = Color(0.9333, 0.949, 1, 1)
+
+[node name="LblNuevoTitulo" type="Label" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Crear perfil nuevo"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblNombreEtq" type="Label" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "NOMBRE DE USUARIO"
+theme_type_variation = &"Etiqueta"
+
+[node name="TxtNombre" type="LineEdit" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+placeholder_text = "Entre 3 y 20 caracteres"
+max_length = 20
+custom_minimum_size = Vector2(0, 64)
+
+[node name="LblNombreAyuda" type="Label" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Entre 3 y 20 caracteres"
+theme_type_variation = &"TextoSecundario"
+autowrap_mode = 3
+
+[node name="LblContraEtq" type="Label" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "CONTRASEÑA (OPCIONAL)"
+theme_type_variation = &"Etiqueta"
+
+[node name="TxtNueva1" type="LineEdit" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+placeholder_text = "4 a 8 dígitos"
+max_length = 8
+secret = true
+custom_minimum_size = Vector2(0, 64)
+virtual_keyboard_type = 2
+
+[node name="TxtNueva2" type="LineEdit" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+placeholder_text = "Repite la contraseña"
+max_length = 8
+secret = true
+custom_minimum_size = Vector2(0, 64)
+virtual_keyboard_type = 2
+
+[node name="LblNuevaAyuda" type="Label" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Si pones contraseña, se pedirá cada vez que entres a este perfil."
+theme_type_variation = &"TextoSecundario"
+autowrap_mode = 3
+
+[node name="BtnCrear" type="Button" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Crear y entrar"
+custom_minimum_size = Vector2(0, 60)
+disabled = true
+
+[node name="BtnCancelarNuevo" type="Button" parent="PanelNuevo/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Cancelar"
+theme_type_variation = &"BotonPlano"
+
+[node name="PanelEliminar" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelEliminar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelEliminar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelEliminar/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelEliminar/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(640, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelEliminar/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="PanelEliminar/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "alerta"
+color = Color(0.7608, 0.2549, 0.0471, 1)
+grosor = 3.0
+fondo = Color(0.9922, 0.9451, 0.9176, 1)
+
+[node name="LblEliminarTitulo" type="Label" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "¿Eliminar este perfil?"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LblEliminarSub" type="Label" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Se borrarán sus puntos, insignias y avance. Esto no se puede deshacer."
+theme_type_variation = &"TextoSecundario"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="TxtEliminarContra" type="LineEdit" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+placeholder_text = "Contraseña del perfil"
+max_length = 8
+secret = true
+custom_minimum_size = Vector2(0, 64)
+virtual_keyboard_type = 2
+
+[node name="LblEliminarError" type="Label" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Contraseña incorrecta."
+theme_type_variation = &"TextoNaranjaNormal"
+horizontal_alignment = 1
+visible = false
+
+[node name="BtnEliminar" type="Button" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Sí, eliminar"
+theme_type_variation = &"BotonNaranja"
+custom_minimum_size = Vector2(0, 60)
+
+[node name="BtnCancelarEliminar" type="Button" parent="PanelEliminar/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+unique_name_in_owner = true
+text = "Cancelar"
+theme_type_variation = &"BotonPlano"

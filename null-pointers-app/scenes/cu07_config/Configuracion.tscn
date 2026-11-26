@@ -1,0 +1,211 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/cu07_config/configuracion.gd" id="script"]
+[ext_resource type="Script" path="res://assets/ui/Icono.gd" id="icono"]
+
+[node name="Configuracion" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margen" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 56
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Columna" type="VBoxContainer" parent="Margen"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Encabezado" type="HBoxContainer" parent="Margen/Columna"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnVolver" type="Button" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+theme_type_variation = &"BotonCircular"
+unique_name_in_owner = true
+
+[node name="Icono" type="Control" parent="Margen/Columna/Encabezado/BtnVolver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.0
+offset_top = -11.0
+offset_right = 11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_izq"
+color = Color(0.0824, 0.098, 0.1686, 1)
+grosor = 2.5
+
+[node name="LblTituloBarra" type="Label" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+text = "Configuración"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"Subtitulo"
+horizontal_alignment = 1
+
+[node name="Hueco" type="Control" parent="Margen/Columna/Encabezado"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 56)
+
+[node name="Scroll" type="ScrollContainer" parent="Margen/Columna"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Lista" type="VBoxContainer" parent="Margen/Columna/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 14
+
+[node name="LblApariencia" type="Label" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+text = "APARIENCIA"
+theme_type_variation = &"Etiqueta"
+
+[node name="FilaModo" type="HBoxContainer" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="BtnClaro" type="Button" parent="Margen/Columna/Scroll/Lista/FilaModo"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 120)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+unique_name_in_owner = true
+
+[node name="Col" type="VBoxContainer" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnClaro"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Centro" type="CenterContainer" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnClaro/Col"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnClaro/Col/Centro"]
+layout_mode = 2
+custom_minimum_size = Vector2(34, 34)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "sol"
+color = Color(0.851, 0.4667, 0.0235, 1)
+grosor = 2.4
+
+[node name="Lbl" type="Label" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnClaro/Col"]
+layout_mode = 2
+text = "Claro"
+theme_type_variation = &"Negrita"
+horizontal_alignment = 1
+mouse_filter = 2
+
+[node name="BtnOscuro" type="Button" parent="Margen/Columna/Scroll/Lista/FilaModo"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 120)
+size_flags_horizontal = 3
+theme_type_variation = &"BotonAvatar"
+toggle_mode = true
+unique_name_in_owner = true
+
+[node name="Col" type="VBoxContainer" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnOscuro"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Centro" type="CenterContainer" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnOscuro/Col"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnOscuro/Col/Centro"]
+layout_mode = 2
+custom_minimum_size = Vector2(34, 34)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "luna"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.4
+
+[node name="Lbl" type="Label" parent="Margen/Columna/Scroll/Lista/FilaModo/BtnOscuro/Col"]
+layout_mode = 2
+text = "Oscuro"
+theme_type_variation = &"Negrita"
+horizontal_alignment = 1
+mouse_filter = 2
+
+[node name="LblPaleta" type="Label" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+text = "COLOR DE LA APP"
+theme_type_variation = &"Etiqueta"
+
+[node name="LblPaletaSub" type="Label" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+text = "Desbloquea más colores avanzando en los temas."
+theme_type_variation = &"TextoSecundario"
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="GridPaletas" type="GridContainer" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+columns = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+unique_name_in_owner = true
+
+[node name="Sep" type="Control" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="BtnRestablecer" type="Button" parent="Margen/Columna/Scroll/Lista"]
+layout_mode = 2
+text = "Restablecer valores por defecto"
+theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+
+[node name="LblNota" type="Label" parent="Margen/Columna"]
+layout_mode = 2
+text = "La configuración se guarda en tu perfil."
+theme_type_variation = &"TextoTerciario"
+horizontal_alignment = 1
+autowrap_mode = 3

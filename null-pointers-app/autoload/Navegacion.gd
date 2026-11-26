@@ -7,6 +7,7 @@
 extends Node
 
 const RUTA_MENU := "res://scenes/menu/Menu.tscn"
+const RUTA_SESION := "res://scenes/cu12_sesion/Sesion.tscn"
 
 
 func _notification(what: int) -> void:
@@ -22,7 +23,7 @@ func atras() -> void:
 	if escena.has_method("atras"):
 		escena.call("atras")
 	elif ResourceLoader.exists(RUTA_MENU):
-		get_tree().change_scene_to_file(RUTA_MENU)
+		get_tree().change_scene_to_file(RUTA_MENU if JuegoRepository.sesion_activa() else RUTA_SESION)
 
 
 ## En PC, la tecla Escape imita el botón Atrás para poder probarlo.

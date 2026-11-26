@@ -59,7 +59,263 @@ var reto_en_pausa: Dictionary = {}
 var reactivo_teoria: int = -1
 
 func _ready() -> void:
+	cargar_perfiles()
+
+
+# =====================================================================
+#  CU-12: PERFILES Y SESIÓN (varios estudiantes en el mismo teléfono)
+# =====================================================================
+# user://perfiles.json guarda el índice: qué perfiles existen, cuál está activo
+# y un resumen (alias, avatar, si tiene contraseña) para la pantalla de inicio
+# de sesión sin tener que abrir cada archivo. Cada perfil tiene su propio
+# archivo de progreso (la "base de datos" de siempre); el primero conserva el
+# nombre nullpointers_bd.json para no perder lo que ya estaba guardado.
+var ruta_indice := "user://perfiles.json"
+var indice: Dictionary = {}
+var perfil_activo_id := ""           # "" = nadie ha iniciado sesión
+
+## Lee el índice (o lo crea a partir del archivo antiguo) y abre el perfil activo.
+func cargar_perfiles() -> void:
+	var datos = _leer_bd(ruta_indice)
+	if datos is Dictionary and datos.has("perfiles"):
+		indice = datos
+	else:
+		indice = {"activo": "", "perfiles": [], "siguiente": 1}
+		if FileAccess.file_exists("user://nullpointers_bd.json"):
+			# Migración: el progreso guardado hasta ahora pasa a ser el primer perfil
+			var viejo = _leer_bd("user://nullpointers_bd.json")
+			var alias := "estudiante"
+			var avatar := "avatar_01"
+			var con_contra := false
+			if viejo is Dictionary and viejo.has("perfil_jugador"):
+				alias = str(viejo["perfil_jugador"].get("alias", alias))
+				avatar = str(viejo["perfil_jugador"].get("avatar_id", avatar))
+				con_contra = str(viejo["perfil_jugador"].get("contrasena", "")) != ""
+			indice["perfiles"].append({"id": "p1", "archivo": "user://nullpointers_bd.json",
+				"alias": alias, "avatar_id": avatar, "con_contrasena": con_contra,
+				"creado": Time.get_datetime_string_from_system(), "ultimo_acceso": ""})
+			indice["activo"] = "p1"
+			indice["siguiente"] = 2
+		_guardar_indice()
+	if indice["perfiles"].is_empty():
+		# Sin perfiles (p. ej. se eliminó el último): se crea uno por defecto y entra directo
+		var nuevo := crear_perfil_nuevo("", "")
+		indice["activo"] = nuevo["id"]
+		_guardar_indice()
+	var activo := str(indice.get("activo", ""))
+	if activo != "" and _entrada_perfil(activo).is_empty():
+		activo = ""
+	if activo != "" and not bool(_entrada_perfil(activo).get("con_contrasena", false)):
+		abrir_perfil(activo)               # sin contraseña: entra directo, como siempre
+	else:
+		_sin_sesion()                      # con contraseña o sesión cerrada: pide iniciar sesión
+
+## Estado sin sesión: datos vacíos y un archivo desechable, para que nada que se
+## guarde por accidente toque el progreso de un perfil real.
+const RUTA_SIN_SESION := "user://sin_sesion.json"
+func _sin_sesion() -> void:
+	perfil_activo_id = ""
+	ruta_bd = RUTA_SIN_SESION
+	bd = _bd_inicial()
+
+func _guardar_indice() -> void:
+	var archivo := FileAccess.open(ruta_indice, FileAccess.WRITE)
+	if archivo != null:
+		archivo.store_string(JSON.stringify(indice, "\t"))
+		archivo.close()
+
+func _entrada_perfil(id: String) -> Dictionary:
+	for p in indice.get("perfiles", []):
+		if str(p["id"]) == id:
+			return p
+	return {}
+
+## ¿Hay un perfil abierto? (false = mostrar la pantalla de inicio de sesión)
+func sesion_activa() -> bool:
+	return perfil_activo_id != ""
+
+## Lista para la pantalla de inicio de sesión: id, alias, avatar_id, con_contrasena, ultimo_acceso.
+func obtener_perfiles() -> Array:
+	var lista: Array = []
+	for p in indice.get("perfiles", []):
+		lista.append(p.duplicate())
+	return lista
+
+## Abre el archivo de un perfil y lo deja como sesión activa (sin pedir contraseña).
+func abrir_perfil(id: String) -> bool:
+	var entrada := _entrada_perfil(id)
+	if entrada.is_empty():
+		return false
+	ruta_bd = str(entrada["archivo"])
+	perfil_activo_id = id
 	cargar_bd()
+	entrada["ultimo_acceso"] = Time.get_datetime_string_from_system()
+	indice["activo"] = id
+	_sincronizar_indice()
+	return true
+
+## Inicio de sesión: si el perfil tiene contraseña, debe coincidir (4-8 dígitos).
+func iniciar_sesion(id: String, contrasena: String = "") -> bool:
+	var entrada := _entrada_perfil(id)
+	if entrada.is_empty():
+		return false
+	if bool(entrada.get("con_contrasena", false)):
+		var datos = _leer_bd(str(entrada["archivo"]))
+		if datos == null:
+			datos = _leer_bd(str(entrada["archivo"]) + ".bak")
+		var guardada := ""
+		if datos is Dictionary and datos.has("perfil_jugador"):
+			guardada = str(datos["perfil_jugador"].get("contrasena", ""))
+		if guardada != "" and guardada != contrasena:
+			return false
+	return abrir_perfil(id)
+
+## Registro: crea un perfil nuevo con su propio archivo y lo abre.
+## alias vacío = nombre automático (estudiante_1234). Regresa la entrada del índice
+## o {} si el alias/contraseña no son válidos o el alias ya existe.
+func crear_perfil_nuevo(alias: String, contrasena: String = "") -> Dictionary:
+	var a := alias.strip_edges()
+	if a == "":
+		a = "estudiante_%04d" % (randi() % 10000)
+	if not alias_valido(a) or (contrasena != "" and not contrasena_valida(contrasena)):
+		return {}
+	for p in indice.get("perfiles", []):
+		if str(p["alias"]).to_lower() == a.to_lower():
+			return {}
+	var n := int(indice.get("siguiente", indice["perfiles"].size() + 1))
+	var id := "p%d" % n
+	indice["siguiente"] = n + 1
+	var entrada := {"id": id, "archivo": "user://perfil_%s.json" % id, "alias": a, "avatar_id": "avatar_01",
+		"con_contrasena": contrasena != "", "creado": Time.get_datetime_string_from_system(), "ultimo_acceso": ""}
+	indice["perfiles"].append(entrada)
+	# Archivo del perfil
+	var inicial := _bd_inicial()
+	inicial["perfil_jugador"]["alias"] = a
+	inicial["perfil_jugador"]["contrasena"] = contrasena
+	ruta_bd = str(entrada["archivo"])
+	bd = inicial
+	perfil_activo_id = id
+	guardar_bd()
+	indice["activo"] = id
+	_guardar_indice()
+	return entrada
+
+## Cierra la sesión: el progreso ya está guardado; solo se olvida quién estaba.
+func cerrar_sesion() -> void:
+	if perfil_activo_id != "":
+		guardar_bd()
+	indice["activo"] = ""
+	_guardar_indice()
+	_sin_sesion()
+
+## Elimina un perfil y su archivo. Si era el activo, cierra la sesión.
+## Si no queda ninguno, se crea uno por defecto para que la app siga usable.
+func eliminar_perfil(id: String) -> bool:
+	var entrada := _entrada_perfil(id)
+	if entrada.is_empty():
+		return false
+	indice["perfiles"].erase(entrada)
+	for sufijo in ["", ".bak", ".tmp"]:
+		var ruta: String = str(entrada["archivo"]) + sufijo
+		if FileAccess.file_exists(ruta):
+			DirAccess.remove_absolute(ruta)
+	if perfil_activo_id == id:
+		indice["activo"] = ""
+		_sin_sesion()
+	if indice["perfiles"].is_empty():
+		var nuevo := crear_perfil_nuevo("", "")
+		indice["activo"] = nuevo["id"]
+	_guardar_indice()
+	return true
+
+## Mantiene el resumen del índice igual al perfil abierto (alias, avatar, contraseña).
+func _sincronizar_indice() -> void:
+	if perfil_activo_id == "":
+		return
+	var entrada := _entrada_perfil(perfil_activo_id)
+	if entrada.is_empty():
+		return
+	entrada["alias"] = str(bd["perfil_jugador"]["alias"])
+	entrada["avatar_id"] = str(bd["perfil_jugador"].get("avatar_id", "avatar_01"))
+	entrada["con_contrasena"] = str(bd["perfil_jugador"].get("contrasena", "")) != ""
+	_guardar_indice()
+
+
+# =====================================================================
+#  CU-07: CONFIGURACIÓN (modo claro/oscuro y paleta de color por perfil)
+# =====================================================================
+## Paletas de acento. La primera siempre está disponible; las demás se desbloquean
+## con el avance (misma idea que los avatares) para incentivar seguir jugando.
+const PALETAS := [
+	{"id": "azul",     "nombre": "Azul clásico",   "color": "#2F55E6", "requisito": {"tipo": "", "valor": 0},                      "condicion": "Disponible desde el inicio"},
+	{"id": "verde",    "nombre": "Verde bosque",   "color": "#1A9D5A", "requisito": {"tipo": "modulos_completados", "valor": 1},   "condicion": "Completa tu primer módulo"},
+	{"id": "morado",   "nombre": "Morado",         "color": "#7C3AED", "requisito": {"tipo": "intentos", "valor": 5},              "condicion": "Termina 5 retos"},
+	{"id": "turquesa", "nombre": "Turquesa",       "color": "#0E8FA8", "requisito": {"tipo": "temas_completos", "valor": 1},       "condicion": "Completa los 3 módulos de un tema"},
+	{"id": "naranja",  "nombre": "Naranja",        "color": "#E25A1C", "requisito": {"tipo": "sin_pistas", "valor": 3},            "condicion": "Completa 3 módulos sin usar pistas"},
+	{"id": "rosa",     "nombre": "Rosa",           "color": "#D9308A", "requisito": {"tipo": "temas_dominados", "valor": 1},       "condicion": "Domina un tema"},
+	{"id": "dorado",   "nombre": "Dorado",         "color": "#C9930A", "requisito": {"tipo": "oros", "valor": 3},                  "condicion": "Consigue 3 medallas de oro"},
+]
+const CONFIG_INICIAL := {"modo": "claro", "paleta": "azul"}
+
+signal configuracion_cambiada(config: Dictionary)
+
+func obtener_configuracion() -> Dictionary:
+	if not bd.has("config"):
+		bd["config"] = CONFIG_INICIAL.duplicate()
+	return bd["config"]
+
+## modo: "claro" u "oscuro". Se guarda en el perfil.
+func actualizar_modo(modo: String) -> bool:
+	if modo != "claro" and modo != "oscuro":
+		return false
+	obtener_configuracion()["modo"] = modo
+	guardar_bd()
+	configuracion_cambiada.emit(obtener_configuracion())
+	return true
+
+## Cambia la paleta de acento; solo si existe y ya está desbloqueada.
+func actualizar_paleta(id_paleta: String) -> bool:
+	if not paleta_disponible(id_paleta):
+		return false
+	obtener_configuracion()["paleta"] = id_paleta
+	guardar_bd()
+	configuracion_cambiada.emit(obtener_configuracion())
+	return true
+
+func info_paleta(id_paleta: String) -> Dictionary:
+	for p in PALETAS:
+		if str(p["id"]) == id_paleta:
+			return p
+	return PALETAS[0]
+
+func paleta_disponible(id_paleta: String) -> bool:
+	var info := info_paleta(id_paleta)
+	if str(info["id"]) != id_paleta:
+		return false
+	var req: Dictionary = info["requisito"]
+	if str(req["tipo"]) == "":
+		return true
+	return int(_metricas().get(str(req["tipo"]), 0)) >= int(req["valor"])
+
+## Catálogo de paletas con disponible / progreso / meta (para la pantalla de configuración).
+func obtener_catalogo_paletas() -> Array:
+	var lista: Array = []
+	var m := _metricas()
+	for p in PALETAS:
+		var fila: Dictionary = p.duplicate(true)
+		var req: Dictionary = p["requisito"]
+		var valor: int = int(m.get(str(req["tipo"]), 0)) if str(req["tipo"]) != "" else 0
+		fila["disponible"] = str(req["tipo"]) == "" or valor >= int(req["valor"])
+		fila["progreso"] = valor
+		fila["meta"] = int(req["valor"])
+		lista.append(fila)
+	return lista
+
+## Restablece la configuración a los valores por defecto (CU-07 flujo alternativo).
+func restablecer_configuracion() -> void:
+	bd["config"] = CONFIG_INICIAL.duplicate()
+	guardar_bd()
+	configuracion_cambiada.emit(obtener_configuracion())
 
 
 # =====================================================================
@@ -79,6 +335,8 @@ func cargar_bd() -> void:
 				bd = datos
 				_refrescar_contenido()           # esquema 4 → 5: insignias con niveles, avatares
 				bd["esquema"] = ESQUEMA
+			if not bd.has("config"):
+				bd["config"] = CONFIG_INICIAL.duplicate()
 			evaluar_insignias()
 			_evaluar_avatares()
 			guardar_bd()
@@ -371,6 +629,7 @@ func actualizar_nombre(nuevo_alias: String) -> bool:
 		return false
 	bd["perfil_jugador"]["alias"] = a
 	guardar_bd()
+	_sincronizar_indice()
 	return true
 
 ## Cambia el avatar (debe ser uno del catálogo Avatar.CATALOGO y estar desbloqueado).
@@ -379,6 +638,7 @@ func actualizar_avatar(avatar_id: String) -> bool:
 		return false
 	bd["perfil_jugador"]["avatar_id"] = avatar_id
 	guardar_bd()
+	_sincronizar_indice()
 	return true
 
 ## ¿El avatar ya se desbloqueó? Los 6 básicos siempre; los demás según su requisito
@@ -426,10 +686,17 @@ func actualizar_contrasena(c1: String, c2: String) -> bool:
 		return false
 	bd["perfil_jugador"]["contrasena"] = c1
 	guardar_bd()
+	_sincronizar_indice()
 	return true
 
 func tiene_contrasena() -> bool:
 	return bd["perfil_jugador"].get("contrasena", "") != ""
+
+## Quita la contraseña del perfil (para quien ya no quiera que se la pidan).
+func quitar_contrasena() -> void:
+	bd["perfil_jugador"]["contrasena"] = ""
+	guardar_bd()
+	_sincronizar_indice()
 
 func obtener_puntos_totales() -> int:
 	return int(bd["perfil_jugador"]["puntos_totales"])
@@ -1088,6 +1355,7 @@ func _bd_inicial() -> Dictionary:
 			"fecha_creacion": Time.get_datetime_string_from_system(),
 		},
 		"teoria_consultas": 0,
+		"config": CONFIG_INICIAL.duplicate(),
 		"contadores": {"terminados": 0, "perfectos": 0, "puzzles_perfectos": 0, "sin_pistas": []},
 		# ---- CU-08: temas de la materia Introducción a la Ingeniería de Software ----
 		"temas": [

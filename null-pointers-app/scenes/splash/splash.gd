@@ -5,6 +5,7 @@
 extends Control
 
 const RUTA_MENU := "res://scenes/menu/Menu.tscn"
+const RUTA_SESION := "res://scenes/cu12_sesion/Sesion.tscn"   # CU-12: si no hay sesión abierta
 const ESPERA_FINAL := 1.1     # segundos tras terminar de escribir
 
 var _saliendo := false
@@ -58,5 +59,8 @@ func _ir_al_menu() -> void:
 	if _saliendo:
 		return
 	_saliendo = true
-	if ResourceLoader.exists(RUTA_MENU):
-		get_tree().change_scene_to_file(RUTA_MENU)
+	# CU-12: con un perfil abierto se entra directo; si no (perfil con contraseña
+	# o sesión cerrada), primero se elige el perfil.
+	var ruta := RUTA_MENU if JuegoRepository.sesion_activa() else RUTA_SESION
+	if ResourceLoader.exists(ruta):
+		get_tree().change_scene_to_file(ruta)

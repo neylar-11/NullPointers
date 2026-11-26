@@ -8,12 +8,18 @@ const RUTA_MAPA      := "res://scenes/cu02_mapa/Mapa.tscn"             # CU-02
 const RUTA_INSIGNIAS := "res://scenes/cu05_insignias/Insignias.tscn"   # CU-05
 const RUTA_PROGRESO  := "res://scenes/cu06_progreso/Progreso.tscn"     # CU-06
 const RUTA_REPASO    := "res://scenes/cu09_repaso/Repaso.tscn"         # CU-09
+const RUTA_CONFIG    := "res://scenes/cu07_config/Configuracion.tscn"  # CU-07
+const RUTA_SESION    := "res://scenes/cu12_sesion/Sesion.tscn"         # CU-12
 # CU-04 (teoría) no tiene entrada en el menú: solo se abre desde una respuesta incorrecta (CU-03).
 # CU-10 (pista) vive dentro del reto (CU-03) y CU-11 (práctica) al final de cada mapa (CU-02).
 
 
 func _ready() -> void:
+	if not JuegoRepository.sesion_activa():      # CU-12: sin perfil abierto no hay menú
+		_ir_a(RUTA_SESION)
+		return
 	%BtnAvatar.pressed.connect(func(): _ir_a(RUTA_PERFIL))
+	%BtnConfig.pressed.connect(func(): _ir_a(RUTA_CONFIG))
 	%BtnJugar.pressed.connect(_on_jugar)
 	%BtnProgreso.pressed.connect(func(): _ir_a(RUTA_PROGRESO))
 	%BtnInsignias.pressed.connect(func(): _ir_a(RUTA_INSIGNIAS))

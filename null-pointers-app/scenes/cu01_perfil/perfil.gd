@@ -5,6 +5,7 @@
 extends Control
 
 const RUTA_MENU := "res://scenes/menu/Menu.tscn"
+const RUTA_SESION := "res://scenes/cu12_sesion/Sesion.tscn"   # CU-12
 
 var avatar_elegido := ""
 var grupo_avatares := ButtonGroup.new()
@@ -21,6 +22,14 @@ func _ready() -> void:
 	%BtnFoto.pressed.connect(_abrir_foto)
 	%BtnNombre.pressed.connect(_abrir_nombre)
 	%BtnContrasena.pressed.connect(_abrir_contrasena)
+	# --- CU-12: sesión y eliminación ---
+	%BtnSesion.pressed.connect(func(): %PanelCerrarSesion.show())
+	%BtnCancelarCerrar.pressed.connect(%PanelCerrarSesion.hide)
+	%BtnConfirmarCerrar.pressed.connect(_cerrar_sesion)
+	%BtnEliminarPerfil.pressed.connect(_abrir_eliminar)
+	%BtnCancelarEliminar.pressed.connect(%PanelEliminarPerfil.hide)
+	%BtnConfirmarEliminar.pressed.connect(_eliminar_perfil)
+	%TxtEliminarContra.text_changed.connect(func(_t): %LblEliminarError.hide())
 
 	# --- Nombre ---
 	%BtnVolverNombre.pressed.connect(_mostrar_menu_perfil.bind(false))
@@ -45,6 +54,10 @@ func _ready() -> void:
 		%TxtContra1.secret = not %TxtContra1.secret
 		%TxtContra2.secret = %TxtContra1.secret)
 	%BtnGuardarContra.pressed.connect(_guardar_contrasena)
+	%BtnQuitarContra.pressed.connect(func():
+		JuegoRepository.quitar_contrasena()
+		cambios["contrasena"] = true
+		_mostrar_menu_perfil(true))
 
 	_mostrar_menu_perfil(false)
 
@@ -54,7 +67,7 @@ func _mostrar_menu_perfil(actualizado: bool) -> void:
 	var p := JuegoRepository.obtener_perfil()
 	%AvatarGrande.avatar_id = p.get("avatar_id", "avatar_01")
 	%LblAliasPerfil.text = p["alias"]
-	%LblSubPerfil.text = "Contraseña configurada" if JuegoRepository.tiene_contrasena() else "Perfil creado automáticamente"
+	%LblSubPerfil.text = "Contraseña configurada" if JuegoRepository.tiene_contrasena() else "Sin contraseña: cualquiera con este teléfono puede entrar a tu perfil"
 
 	%BannerOk.visible = actualizado
 	%Resumen.visible = actualizado
@@ -79,10 +92,35 @@ func _mostrar_panel(panel: Control) -> void:
 
 ## Botón Atrás de Android (Navegacion).
 func atras() -> void:
-	if %PanelMenu.visible:
+	if %PanelCerrarSesion.visible:
+		%PanelCerrarSesion.hide()
+	elif %PanelEliminarPerfil.visible:
+		%PanelEliminarPerfil.hide()
+	elif %PanelMenu.visible:
 		_ir_al_menu()
 	else:
 		_mostrar_menu_perfil(false)
+
+
+# ============================ CU-12: SESIÓN ============================
+func _cerrar_sesion() -> void:
+	JuegoRepository.cerrar_sesion()
+	get_tree().change_scene_to_file(RUTA_SESION)
+
+
+func _abrir_eliminar() -> void:
+	%TxtEliminarContra.visible = JuegoRepository.tiene_contrasena()
+	%TxtEliminarContra.text = ""
+	%LblEliminarError.hide()
+	%PanelEliminarPerfil.show()
+
+
+func _eliminar_perfil() -> void:
+	if JuegoRepository.tiene_contrasena() and %TxtEliminarContra.text != JuegoRepository.obtener_perfil().get("contrasena", ""):
+		%LblEliminarError.show()
+		return
+	JuegoRepository.eliminar_perfil(JuegoRepository.perfil_activo_id)
+	get_tree().change_scene_to_file(RUTA_SESION)
 
 
 func _ir_al_menu() -> void:
@@ -256,6 +294,7 @@ func _abrir_contrasena() -> void:
 	%TxtContra1.secret = true
 	%TxtContra2.secret = true
 	_validar_contrasena()
+	%BtnQuitarContra.visible = JuegoRepository.tiene_contrasena()
 	_mostrar_panel(%PanelContrasena)
 	%TxtContra1.grab_focus()
 
