@@ -23,6 +23,7 @@ boot_splash/use_filter=true
 [autoload]
 
 JuegoRepository="*res://autoload/JuegoRepository.gd"
+Estilo="*res://autoload/Estilo.gd"
 Navegacion="*res://autoload/Navegacion.gd"
 
 [display]

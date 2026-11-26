@@ -300,6 +300,104 @@ text = ""
 theme_type_variation = &"BotonInvisible"
 unique_name_in_owner = true
 
+[node name="FilaSesion" type="PanelContainer" parent="PanelMenu/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+
+[node name="Fila" type="HBoxContainer" parent="PanelMenu/Columna/Opciones/FilaSesion"]
+layout_mode = 2
+theme_override_constants/separation = 16
+mouse_filter = 2
+
+[node name="Caja" type="PanelContainer" parent="PanelMenu/Columna/Opciones/FilaSesion/Fila"]
+layout_mode = 2
+theme_type_variation = &"CajaIconoAzul"
+custom_minimum_size = Vector2(52, 52)
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="PanelMenu/Columna/Opciones/FilaSesion/Fila/Caja"]
+layout_mode = 2
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "salir"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 2.2
+
+[node name="Lbl" type="Label" parent="PanelMenu/Columna/Opciones/FilaSesion/Fila"]
+layout_mode = 2
+text = "Cerrar sesión / cambiar de perfil"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Negrita"
+
+[node name="Flecha" type="Control" parent="PanelMenu/Columna/Opciones/FilaSesion/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_der"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="BtnSesion" type="Button" parent="PanelMenu/Columna/Opciones/FilaSesion"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
+[node name="FilaEliminar" type="PanelContainer" parent="PanelMenu/Columna/Opciones"]
+layout_mode = 2
+theme_type_variation = &"TarjetaBoton"
+
+[node name="Fila" type="HBoxContainer" parent="PanelMenu/Columna/Opciones/FilaEliminar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+mouse_filter = 2
+
+[node name="Caja" type="PanelContainer" parent="PanelMenu/Columna/Opciones/FilaEliminar/Fila"]
+layout_mode = 2
+theme_type_variation = &"CajaIconoNaranja"
+custom_minimum_size = Vector2(52, 52)
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Icono" type="Control" parent="PanelMenu/Columna/Opciones/FilaEliminar/Fila/Caja"]
+layout_mode = 2
+custom_minimum_size = Vector2(24, 24)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "basura"
+color = Color(0.7608, 0.2549, 0.0471, 1)
+grosor = 2.2
+
+[node name="Lbl" type="Label" parent="PanelMenu/Columna/Opciones/FilaEliminar/Fila"]
+layout_mode = 2
+text = "Eliminar este perfil"
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"TextoNaranja"
+
+[node name="Flecha" type="Control" parent="PanelMenu/Columna/Opciones/FilaEliminar/Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 22)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "flecha_der"
+color = Color(0.5412, 0.5647, 0.6275, 1)
+grosor = 2.2
+size_flags_vertical = 4
+
+[node name="BtnEliminarPerfil" type="Button" parent="PanelMenu/Columna/Opciones/FilaEliminar"]
+layout_mode = 2
+text = ""
+theme_type_variation = &"BotonInvisible"
+unique_name_in_owner = true
+
 [node name="Resumen" type="PanelContainer" parent="PanelMenu/Columna"]
 layout_mode = 2
 theme_type_variation = &"Tarjeta"
@@ -828,4 +926,198 @@ disabled = true
 layout_mode = 2
 text = "Cancelar"
 theme_type_variation = &"BotonSecundario"
+unique_name_in_owner = true
+
+[node name="BtnQuitarContra" type="Button" parent="PanelContrasena/Columna"]
+layout_mode = 2
+text = "Quitar la contraseña de este perfil"
+theme_type_variation = &"BotonPlano"
+unique_name_in_owner = true
+visible = false
+
+[node name="PanelCerrarSesion" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelCerrarSesion"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelCerrarSesion"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelCerrarSesion/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelCerrarSesion/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(640, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelCerrarSesion/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelCerrarSesion/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="PanelCerrarSesion/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "salir"
+color = Color(0.1843, 0.3333, 0.902, 1)
+grosor = 3.0
+fondo = Color(0.9333, 0.949, 1, 1)
+
+[node name="LblCerrarTitulo" type="Label" parent="PanelCerrarSesion/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "¿Cerrar sesión?"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+autowrap_mode = 3
+unique_name_in_owner = true
+
+[node name="LblCerrarSub" type="Label" parent="PanelCerrarSesion/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Tu progreso ya está guardado. Para volver a entrar necesitarás tu nombre de usuario y, si la configuraste, tu contraseña: anótalos en un lugar seguro."
+theme_type_variation = &"TextoSecundario"
+horizontal_alignment = 1
+autowrap_mode = 3
+unique_name_in_owner = true
+
+[node name="BtnConfirmarCerrar" type="Button" parent="PanelCerrarSesion/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Cerrar sesión"
+theme_type_variation = &"Button"
+custom_minimum_size = Vector2(0, 60)
+unique_name_in_owner = true
+
+[node name="BtnCancelarCerrar" type="Button" parent="PanelCerrarSesion/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Cancelar"
+theme_type_variation = &"BotonPlano"
+unique_name_in_owner = true
+
+[node name="PanelEliminarPerfil" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+unique_name_in_owner = true
+visible = false
+
+[node name="Overlay" type="PanelContainer" parent="PanelEliminarPerfil"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Overlay"
+
+[node name="MargenModal" type="MarginContainer" parent="PanelEliminarPerfil"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 0
+
+[node name="Centro" type="CenterContainer" parent="PanelEliminarPerfil/MargenModal"]
+layout_mode = 2
+
+[node name="Modal" type="PanelContainer" parent="PanelEliminarPerfil/MargenModal/Centro"]
+layout_mode = 2
+theme_type_variation = &"Modal"
+custom_minimum_size = Vector2(640, 0)
+
+[node name="Columna" type="VBoxContainer" parent="PanelEliminarPerfil/MargenModal/Centro/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CentroIcono" type="CenterContainer" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+
+[node name="Icono" type="Control" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna/CentroIcono"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+mouse_filter = 2
+script = ExtResource("icono")
+tipo = "alerta"
+color = Color(0.7608, 0.2549, 0.0471, 1)
+grosor = 3.0
+fondo = Color(0.9922, 0.9451, 0.9176, 1)
+
+[node name="LblEliminarTitulo" type="Label" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "¿Eliminar este perfil?"
+theme_type_variation = &"TituloSeccion"
+horizontal_alignment = 1
+autowrap_mode = 3
+unique_name_in_owner = true
+
+[node name="LblEliminarSub" type="Label" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Se borrarán tus puntos, insignias y avance de este teléfono. Esto no se puede deshacer."
+theme_type_variation = &"TextoSecundario"
+horizontal_alignment = 1
+autowrap_mode = 3
+unique_name_in_owner = true
+
+[node name="TxtEliminarContra" type="LineEdit" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+placeholder_text = "Contraseña del perfil"
+max_length = 8
+secret = true
+custom_minimum_size = Vector2(0, 64)
+virtual_keyboard_type = 2
+unique_name_in_owner = true
+
+[node name="LblEliminarError" type="Label" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Contraseña incorrecta."
+theme_type_variation = &"TextoNaranjaNormal"
+horizontal_alignment = 1
+visible = false
+unique_name_in_owner = true
+
+[node name="BtnConfirmarEliminar" type="Button" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Sí, eliminar mi perfil"
+theme_type_variation = &"BotonNaranja"
+custom_minimum_size = Vector2(0, 60)
+unique_name_in_owner = true
+
+[node name="BtnCancelarEliminar" type="Button" parent="PanelEliminarPerfil/MargenModal/Centro/Modal/Columna"]
+layout_mode = 2
+text = "Cancelar"
+theme_type_variation = &"BotonPlano"
 unique_name_in_owner = true

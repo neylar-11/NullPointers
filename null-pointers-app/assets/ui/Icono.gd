@@ -6,7 +6,8 @@ extends Control
 class_name Icono
 
 const TIPOS := ["check", "candado", "play", "cerrar", "alerta", "estrella", "info", "grafica",
-	"flecha_izq", "flecha_der", "camara", "lapiz", "mapa", "libro", "reiniciar", "ojo", "puzzle", "quiz", "progreso"]
+	"flecha_izq", "flecha_der", "camara", "lapiz", "mapa", "libro", "reiniciar", "ojo", "puzzle", "quiz", "progreso",
+	"engrane", "salir", "usuario", "basura", "luna", "sol", "paleta", "mas", "usuarios"]
 
 @export var tipo: String = "check":
 	set(v):
@@ -43,6 +44,46 @@ func _draw() -> void:
 			draw_rect(Rect2(c + Vector2(-u * 0.55, -u * 0.55), Vector2(u * 1.1, u * 1.1)), color, false, g, true)
 			draw_rect(Rect2(c + Vector2(-u * 0.3, -u * 0.55), Vector2(u * 0.6, u * 0.35)), color, false, g, true)
 			draw_rect(Rect2(c + Vector2(-u * 0.3, u * 0.1), Vector2(u * 0.6, u * 0.45)), color, true)
+		"engrane":
+			draw_circle(c, u * 0.22, color, false, g, true)
+			for k in 8:
+				var a := k * TAU / 8.0
+				draw_line(c + Vector2(cos(a), sin(a)) * u * 0.42, c + Vector2(cos(a), sin(a)) * u * 0.66, color, g * 1.6, true)
+			draw_arc(c, u * 0.42, 0, TAU, 32, color, g, true)
+		"salir":
+			draw_polyline(PackedVector2Array([c + Vector2(u * 0.0, -u * 0.6), c + Vector2(-u * 0.6, -u * 0.6), c + Vector2(-u * 0.6, u * 0.6), c + Vector2(u * 0.0, u * 0.6)]), color, g, true)
+			draw_line(c + Vector2(-u * 0.15, 0), c + Vector2(u * 0.65, 0), color, g, true)
+			draw_polyline(PackedVector2Array([c + Vector2(u * 0.3, -u * 0.32), c + Vector2(u * 0.65, 0), c + Vector2(u * 0.3, u * 0.32)]), color, g, true)
+		"usuario":
+			draw_circle(c + Vector2(0, -u * 0.3), u * 0.3, color, false, g, true)
+			draw_arc(c + Vector2(0, u * 0.7), u * 0.62, deg_to_rad(205), deg_to_rad(335), 20, color, g, true)
+		"usuarios":
+			draw_circle(c + Vector2(-u * 0.2, -u * 0.3), u * 0.26, color, false, g, true)
+			draw_arc(c + Vector2(-u * 0.2, u * 0.6), u * 0.55, deg_to_rad(205), deg_to_rad(335), 20, color, g, true)
+			draw_arc(c + Vector2(u * 0.3, -u * 0.3), u * 0.26, deg_to_rad(-60), deg_to_rad(120), 16, color, g, true)
+			draw_arc(c + Vector2(u * 0.3, u * 0.6), u * 0.55, deg_to_rad(270), deg_to_rad(335), 12, color, g, true)
+		"basura":
+			draw_line(c + Vector2(-u * 0.6, -u * 0.4), c + Vector2(u * 0.6, -u * 0.4), color, g, true)
+			draw_line(c + Vector2(-u * 0.2, -u * 0.6), c + Vector2(u * 0.2, -u * 0.6), color, g, true)
+			draw_polyline(PackedVector2Array([c + Vector2(-u * 0.45, -u * 0.4), c + Vector2(-u * 0.35, u * 0.6), c + Vector2(u * 0.35, u * 0.6), c + Vector2(u * 0.45, -u * 0.4)]), color, g, true)
+			draw_line(c + Vector2(0, -u * 0.2), c + Vector2(0, u * 0.4), color, g, true)
+		"luna":
+			draw_arc(c, u * 0.55, deg_to_rad(40), deg_to_rad(320), 24, color, g, true)
+			draw_arc(c + Vector2(u * 0.3, 0), u * 0.42, deg_to_rad(230), deg_to_rad(490), 24, color, g, true)
+		"sol":
+			draw_circle(c, u * 0.28, color, false, g, true)
+			for k in 8:
+				var a := k * TAU / 8.0
+				draw_line(c + Vector2(cos(a), sin(a)) * u * 0.45, c + Vector2(cos(a), sin(a)) * u * 0.65, color, g, true)
+		"paleta":
+			draw_arc(c, u * 0.6, deg_to_rad(30), deg_to_rad(330), 28, color, g, true)
+			draw_line(c + Vector2(u * 0.52, -u * 0.3), c + Vector2(u * 0.1, 0), color, g, true)
+			draw_line(c + Vector2(u * 0.1, 0), c + Vector2(u * 0.52, u * 0.3), color, g, true)
+			for p in [Vector2(-0.3, -0.25), Vector2(0.05, -0.4), Vector2(-0.3, 0.2)]:
+				draw_circle(c + p * u, u * 0.1, color, true, -1.0, true)
+		"mas":
+			draw_line(c + Vector2(-u * 0.55, 0), c + Vector2(u * 0.55, 0), color, g, true)
+			draw_line(c + Vector2(0, -u * 0.55), c + Vector2(0, u * 0.55), color, g, true)
 		"check":
 			draw_polyline(PackedVector2Array([c + Vector2(-u * 0.55, 0.02 * u), c + Vector2(-u * 0.15, u * 0.42), c + Vector2(u * 0.6, -u * 0.42)]), color, g, true)
 		"cerrar":
