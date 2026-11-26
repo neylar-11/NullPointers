@@ -77,6 +77,14 @@ func _mostrar_panel(panel: Control) -> void:
 		p.visible = p == panel
 
 
+## Botón Atrás de Android (Navegacion).
+func atras() -> void:
+	if %PanelMenu.visible:
+		_ir_al_menu()
+	else:
+		_mostrar_menu_perfil(false)
+
+
 func _ir_al_menu() -> void:
 	get_tree().change_scene_to_file(RUTA_MENU)
 

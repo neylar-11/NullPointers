@@ -62,6 +62,11 @@ func _mostrar_no_disponible() -> void:
 
 
 # ===================== PASOS 4-5: VOLVER A CU-03 =====================
+## Botón Atrás de Android (Navegacion).
+func atras() -> void:
+	_volver_al_reto()
+
+
 func _volver_al_reto() -> void:
 	JuegoRepository.reactivo_teoria = -1
 	# CU-09: si la teoría se abrió desde el repaso de errores, se regresa ahí

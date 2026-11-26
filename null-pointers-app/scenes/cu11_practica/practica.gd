@@ -606,6 +606,18 @@ func _on_reintentar() -> void:
 	_mostrar_ejercicio()
 
 
+## Botón Atrás de Android (Navegacion).
+func atras() -> void:
+	if %PanelTeoria.visible:
+		%PanelTeoria.hide()
+	elif %PanelSalir.visible:
+		%PanelSalir.hide()
+	elif %PanelResultado.visible:
+		_volver_al_mapa()
+	else:
+		%PanelSalir.show()        # alt. abandono: se pide confirmación
+
+
 func _volver_al_mapa() -> void:
 	JuegoRepository.tema_seleccionado = id_tema
 	JuegoRepository.puzzle_modulo = 0

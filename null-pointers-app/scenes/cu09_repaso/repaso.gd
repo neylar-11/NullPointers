@@ -432,6 +432,14 @@ func _terminar() -> void:
 
 
 ## Flujo alternativo 5: abandono. Lo corregido ya quedó guardado; no se pide confirmación.
+## Botón Atrás de Android (Navegacion).
+func atras() -> void:
+	if %PanelResultado.visible:
+		get_tree().change_scene_to_file(RUTA_MENU)
+	else:
+		_on_volver()
+
+
 func _on_volver() -> void:
 	if %PanelPregunta.visible:
 		JuegoRepository.terminar_repaso()

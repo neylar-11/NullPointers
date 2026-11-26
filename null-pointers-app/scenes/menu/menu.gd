@@ -66,6 +66,11 @@ func _actualizar_datos() -> void:
 		%LblRepasoSub.text = "%d pregunta%s por repasar" % [errores, "" if errores == 1 else "s"]
 
 
+## Botón Atrás de Android (Navegacion): el menú es la pantalla raíz, así que cierra la app.
+func atras() -> void:
+	get_tree().quit()
+
+
 ## Cambia de pantalla; si la escena aún no existe, solo avisa en consola.
 func _ir_a(ruta: String) -> void:
 	if ResourceLoader.exists(ruta):

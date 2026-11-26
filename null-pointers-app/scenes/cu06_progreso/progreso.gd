@@ -144,3 +144,8 @@ func _crear_fila(f: Dictionary, dominado: bool) -> Control:
 	col.add_child(barra)
 
 	return tarjeta
+
+
+## Botón Atrás de Android (Navegacion): vuelve al menú.
+func atras() -> void:
+	get_tree().change_scene_to_file(RUTA_MENU)

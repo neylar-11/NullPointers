@@ -490,6 +490,18 @@ func _ids_reactivos() -> Array:
 	return ids
 
 
+## Botón Atrás de Android (Navegacion).
+func atras() -> void:
+	if %PanelPista.visible:
+		%PanelPista.hide()
+	elif %PanelSalir.visible:
+		%PanelSalir.hide()
+	elif %PanelResultado.visible:
+		_volver_al_mapa()
+	else:
+		%PanelSalir.show()        # alt. abandono: se pide confirmación
+
+
 func _volver_al_mapa() -> void:
 	# Si se sale a media partida, el intento simplemente no se registra (flujo alt. abandono).
 	if ResourceLoader.exists(RUTA_MAPA):

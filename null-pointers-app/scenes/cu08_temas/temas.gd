@@ -161,3 +161,8 @@ func _crear_tarjeta(f: Dictionary) -> Control:
 func _on_tema_presionado(id_tema: int) -> void:
 	JuegoRepository.seleccionar_tema(id_tema)
 	get_tree().change_scene_to_file(RUTA_MAPA)
+
+
+## Botón Atrás de Android (Navegacion): vuelve al menú.
+func atras() -> void:
+	get_tree().change_scene_to_file(RUTA_MENU)

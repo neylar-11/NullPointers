@@ -49,6 +49,11 @@ func _on_logo_listo() -> void:
 	tw.tween_callback(_ir_al_menu)
 
 
+## Botón Atrás de Android (Navegacion): salta la animación.
+func atras() -> void:
+	_ir_al_menu()
+
+
 func _ir_al_menu() -> void:
 	if _saliendo:
 		return

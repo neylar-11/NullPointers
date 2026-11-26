@@ -242,3 +242,11 @@ func _fecha_corta(iso: String) -> String:
 	if mes < 1 or mes > 12:
 		return iso.substr(0, 10)
 	return "%d %s %s" % [dia, meses[mes - 1], anio]
+
+
+## Botón Atrás de Android (Navegacion): cierra la tarjeta o vuelve al menú.
+func atras() -> void:
+	if %PanelDetalle.visible:
+		%PanelDetalle.hide()
+	else:
+		get_tree().change_scene_to_file(RUTA_MENU)

@@ -51,6 +51,16 @@ func _ready() -> void:
 
 
 ## CU-08 paso 6: al volver del mapa se regresa al catálogo de temas (o al menú).
+## Botón Atrás de Android (Navegacion).
+func atras() -> void:
+	if %PanelDetalle.visible:
+		%PanelDetalle.hide()
+	elif %PanelBloqueado.visible:
+		%PanelBloqueado.hide()
+	else:
+		_volver()
+
+
 func _volver() -> void:
 	if ResourceLoader.exists(RUTA_TEMAS):
 		get_tree().change_scene_to_file(RUTA_TEMAS)
