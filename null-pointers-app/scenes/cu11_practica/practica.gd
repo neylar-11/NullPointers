@@ -8,7 +8,7 @@
 #        del mapa (CU-03 con mecánicas de manipulación) en lugar de la práctica.
 #   3.   Se carga la práctica: escenario + secuencia de 3 a 5 ejercicios      → _ready()
 #   4.   Se muestra el escenario y el ejercicio actual, de uno de estos tipos  → _mostrar_ejercicio()
-#          clasificar  : tocar la etiqueta de cada tarjeta para asignarle categoría
+#          clasificar  : tocar «Elegir» en cada tarjeta y escoger su categoría en una hoja
 #          construir   : colocar actores y casos de uso en el diagrama (misma mecánica)
 #          ordenar     : tocar las piezas en orden para construir la secuencia
 #          seleccionar : elegir qué tareas caben sin exceder las horas
@@ -121,10 +121,10 @@ func _mostrar_ejercicio() -> void:
 	match tipo:
 		"clasificar":
 			%LblTipo.text = "CLASIFICAR"
-			%LblAyuda.text = "Toca la etiqueta de cada tarjeta para cambiar su categoría: %s." % " / ".join(ej["categorias"])
+			%LblAyuda.text = "Toca «Elegir» en cada tarjeta y escoge su categoría: %s." % " / ".join(ej["categorias"])
 		"construir":
 			%LblTipo.text = "CONSTRUIR DIAGRAMA"
-			%LblAyuda.text = "Toca la etiqueta de cada elemento para colocarlo en el diagrama: %s." % " / ".join(ej["categorias"])
+			%LblAyuda.text = "Toca «Elegir» en cada elemento y escoge dónde va en el diagrama: %s." % " / ".join(ej["categorias"])
 		"ordenar":
 			%LblTipo.text = "CONSTRUIR SECUENCIA"
 			%LblAyuda.text = "Toca las piezas en el orden correcto. Usa Deshacer para quitar la última."
@@ -186,23 +186,90 @@ func _construir_clasificar(ej: Dictionary) -> void:
 		chip.theme_type_variation = &"BotonSecundario"
 		chip.custom_minimum_size = Vector2(170, 56)
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		chip.pressed.connect(_on_ciclar_categoria.bind(i, ej["categorias"]))
+		chip.pressed.connect(_abrir_selector.bind(i, ej["categorias"]))
 		t["fila"].add_child(chip)
 		%Area.add_child(t["panel"])
 		tarjetas.append(t["panel"])
 
 
-## Cada toque pasa a la siguiente categoría (Elegir → cat1 → cat2 → … → Elegir).
-func _on_ciclar_categoria(i: int, categorias: Array) -> void:
+## Hoja de selección: muestra todas las categorías del ejercicio como botones grandes
+## (antes cada toque ciclaba a la siguiente categoría, lo que en el teléfono confundía).
+var selector: Control = null
+
+func _abrir_selector(i: int, categorias: Array) -> void:
 	if evaluado:
 		return
-	var actual: String = asignacion[i]
-	var k := categorias.find(actual)
-	var siguiente: String = categorias[0] if k < 0 else (categorias[k + 1] if k + 1 < categorias.size() else "")
-	asignacion[i] = siguiente
+	_cerrar_selector()
+	selector = Control.new()
+	selector.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(selector)
+
+	var fondo := Button.new()                    # tocar fuera de la hoja la cierra
+	fondo.theme_type_variation = &"BotonInvisible"
+	fondo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fondo.pressed.connect(_cerrar_selector)
+	selector.add_child(fondo)
+	var sombra := PanelContainer.new()
+	sombra.theme_type_variation = &"Overlay"
+	sombra.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sombra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	selector.add_child(sombra)
+
+	var hoja := PanelContainer.new()             # hoja pegada abajo, como en Android
+	hoja.theme_type_variation = &"Hoja"
+	hoja.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	hoja.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	selector.add_child(hoja)
+	var margen := MarginContainer.new()
+	for lado in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margen.add_theme_constant_override(lado, 28)
+	hoja.add_child(margen)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 12)
+	margen.add_child(col)
+
+	var etq := Label.new()
+	etq.text = "¿DÓNDE VA ESTA PIEZA?"
+	etq.theme_type_variation = &"Etiqueta"
+	col.add_child(etq)
+	var txt := Label.new()
+	txt.text = str(piezas[i]["texto"])
+	txt.theme_type_variation = &"TituloTarjeta"
+	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(txt)
+	var sep := Control.new()
+	sep.custom_minimum_size = Vector2(0, 6)
+	col.add_child(sep)
+
+	for cat in categorias:
+		var b := Button.new()
+		b.text = str(cat)
+		b.custom_minimum_size = Vector2(0, 64)
+		b.theme_type_variation = &"BotonTarjetaAzul" if asignacion[i] == str(cat) else &"BotonSecundario"
+		b.pressed.connect(_on_categoria_elegida.bind(i, str(cat)))
+		col.add_child(b)
+	var cancelar := Button.new()
+	cancelar.text = "Cancelar"
+	cancelar.theme_type_variation = &"BotonPlano"
+	cancelar.custom_minimum_size = Vector2(0, 56)
+	cancelar.pressed.connect(_cerrar_selector)
+	col.add_child(cancelar)
+
+
+func _cerrar_selector() -> void:
+	if selector != null:
+		selector.queue_free()
+		selector = null
+
+
+func _on_categoria_elegida(i: int, categoria: String) -> void:
+	_cerrar_selector()
+	if evaluado:
+		return
+	asignacion[i] = categoria
 	var chip: Button = tarjetas[i].get_node("Col/Fila/Chip")
-	chip.text = (siguiente + " ▾") if siguiente != "" else "Elegir ▾"
-	tarjetas[i].theme_type_variation = &"OpcionSel" if siguiente != "" else &"Opcion"
+	chip.text = categoria + " ▾"
+	tarjetas[i].theme_type_variation = &"OpcionSel"
 	var completo := true
 	for a in asignacion:
 		if a == "":
@@ -377,11 +444,15 @@ func _on_comprobar() -> void:
 	%LblRetroTitulo.theme_type_variation = &"TextoVerde" if perfecto else &"TextoNaranja"
 	%LblRetroTexto.text = ej["justificacion"] if perfecto else "Solución recomendada: " + ej["justificacion"]
 	%LblRetroTexto.theme_type_variation = &"TextoVerdeNormal" if perfecto else &"TextoNaranjaNormal"
-	%BtnVerTeoria.visible = not perfecto and str(ej.get("concepto", "")) != ""   # alt. 1 → CU-04
+	%BtnVerTeoria.visible = str(ej.get("concepto", "")) != ""   # alt. 1 → CU-04 (disponible aunque esté perfecto)
 	%BtnContinuar.text = "Ver resultado" if indice == ejercicios.size() - 1 else "Siguiente ejercicio"
 	%BotonesEjercicio.hide()
 	%PanelRetro.show()
 	%BotonesRetro.show()
+	%TarjetaEscenario.hide()
+	# El resultado va arriba de las piezas; se regresa el scroll al inicio para que se vea
+	# de inmediato en pantallas chicas (antes quedaba debajo de la lista y había que bajar).
+	%Scroll.set_deferred("scroll_vertical", 0)
 
 
 ## Marca una pieza como correcta (verde) o incorrecta (naranja) con el detalle de la solución.
@@ -608,7 +679,9 @@ func _on_reintentar() -> void:
 
 ## Botón Atrás de Android (Navegacion).
 func atras() -> void:
-	if %PanelTeoria.visible:
+	if selector != null:
+		_cerrar_selector()
+	elif %PanelTeoria.visible:
 		%PanelTeoria.hide()
 	elif %PanelSalir.visible:
 		%PanelSalir.hide()

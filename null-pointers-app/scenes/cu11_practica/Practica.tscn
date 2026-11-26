@@ -133,6 +133,7 @@ value = 1.0
 show_percentage = false
 
 [node name="Scroll" type="ScrollContainer" parent="PanelEjercicio/Columna"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -198,11 +199,6 @@ theme_type_variation = &"Pequeno"
 unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="Area" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll/V"]
-layout_mode = 2
-theme_override_constants/separation = 10
-unique_name_in_owner = true
-
 [node name="PanelRetro" type="PanelContainer" parent="PanelEjercicio/Columna/Scroll/V"]
 layout_mode = 2
 theme_type_variation = &"TarjetaVerde"
@@ -242,6 +238,11 @@ text = "Justificación…"
 theme_type_variation = &"TextoVerdeNormal"
 unique_name_in_owner = true
 autowrap_mode = 3
+
+[node name="Area" type="VBoxContainer" parent="PanelEjercicio/Columna/Scroll/V"]
+layout_mode = 2
+theme_override_constants/separation = 10
+unique_name_in_owner = true
 
 [node name="E" type="Control" parent="PanelEjercicio/Columna/Scroll/V"]
 layout_mode = 2
