@@ -127,7 +127,7 @@ func _mostrar_ejercicio() -> void:
 			%LblAyuda.text = "Toca «Elegir» en cada elemento y escoge dónde va en el diagrama: %s." % " / ".join(ej["categorias"])
 		"ordenar":
 			%LblTipo.text = "CONSTRUIR SECUENCIA"
-			%LblAyuda.text = "Toca las piezas en el orden correcto. Usa Deshacer para quitar la última."
+			%LblAyuda.text = "Toca las piezas en el orden correcto. Vuelve a tocar una pieza para quitarla."
 		"seleccionar":
 			%LblTipo.text = "SELECCIONAR"
 			%LblAyuda.text = "Marca las tareas que caben. Límite: %d h." % int(ej["limite"])
@@ -304,9 +304,15 @@ func _construir_ordenar() -> void:
 
 
 func _on_pieza_orden(i: int) -> void:
-	if evaluado or i in secuencia:
+	if evaluado:
 		return
-	secuencia.append(i)
+	var pos := secuencia.find(i)
+	if pos >= 0:
+		# DEF-09: tocar una pieza ya numerada la desmarca (antes solo se podía con «Deshacer»);
+		# las piezas que iban después se recorren para que la secuencia siga sin huecos.
+		secuencia.remove_at(pos)
+	else:
+		secuencia.append(i)
 	_pintar_secuencia()
 
 

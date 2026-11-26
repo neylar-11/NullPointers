@@ -10,6 +10,35 @@ const RUTA_MENU := "res://scenes/menu/Menu.tscn"
 const RUTA_SESION := "res://scenes/cu12_sesion/Sesion.tscn"
 
 
+func _ready() -> void:
+	# DEF-10: en Android, un ScrollContainer solo se puede arrastrar con el dedo si el
+	# toque empieza en un control que deja pasar el evento. Los botones y paneles tienen
+	# mouse_filter = STOP por defecto, así que la lista solo se movía desde la barra.
+	# Aquí se cambia a PASS todo control que esté dentro de un ScrollContainer; el botón
+	# sigue recibiendo el toque y, si el dedo se arrastra, el ScrollContainer cancela el
+	# clic (NOTIFICATION_SCROLL_BEGIN) y desplaza la lista.
+	get_tree().node_added.connect(habilitar_scroll_tactil)
+	for n in get_tree().root.find_children("*", "Control", true, false):
+		habilitar_scroll_tactil(n)
+
+
+## Deja pasar los toques de un control que vive dentro de un ScrollContainer.
+func habilitar_scroll_tactil(n: Node) -> void:
+	if not (n is Control) or n is ScrollContainer or n is ScrollBar:
+		return
+	var c := n as Control
+	if c.mouse_filter != Control.MOUSE_FILTER_STOP:
+		return
+	var p := c.get_parent()
+	while p != null:
+		if p is ScrollContainer:
+			c.mouse_filter = Control.MOUSE_FILTER_PASS
+			return
+		if p is Window:
+			return
+		p = p.get_parent()
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		atras()

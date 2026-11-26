@@ -25,7 +25,7 @@ func _ready() -> void:
 	%BtnVolverMenu.pressed.connect(func(): get_tree().change_scene_to_file(RUTA_MENU))
 	%BtnJugar.pressed.connect(func(): get_tree().change_scene_to_file(RUTA_MAPA))
 	%BtnRepaso.pressed.connect(func(): get_tree().change_scene_to_file(RUTA_REPASO))
-	%LblMinimo.text = "Dominado = mejor puntaje ≥ %d %%. Área de mejora = intentado con < %d %%." % [
+	%LblMinimo.text = "Dominado = mejor puntaje ≥ %d %%. Área de mejora = intentado con < %d %%. Los dominados sin 100 %% se pueden rejugar para subir el puntaje." % [
 		JuegoRepository.PORCENTAJE_MINIMO, JuegoRepository.PORCENTAJE_MINIMO]
 
 	var perfil := JuegoRepository.obtener_perfil()
@@ -120,12 +120,21 @@ func _crear_fila(f: Dictionary, dominado: bool) -> Control:
 	sub.theme_type_variation = &"Pequeno"
 	textos.add_child(sub)
 
+	# Completado sin 100 %: se avisa que todavía se puede subir el puntaje rejugándolo
+	if bool(f.get("mejorable", false)):
+		var mejorable := Label.new()
+		mejorable.text = "Puedes mejorarlo: te faltan %d %% para el puntaje perfecto" % (100 - int(f["mejor_porcentaje"]))
+		mejorable.theme_type_variation = &"TextoNaranja"
+		mejorable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		textos.add_child(mejorable)
+
 	var chip := PanelContainer.new()
-	chip.theme_type_variation = &"ChipVerde" if dominado else &"ChipGris"
+	var mejorable_chip := bool(f.get("mejorable", false))
+	chip.theme_type_variation = &"ChipVerde" if dominado and not mejorable_chip else (&"ChipNaranja" if dominado else &"ChipGris")
 	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var pct := Label.new()
 	pct.text = "%d %%" % int(f["mejor_porcentaje"])
-	pct.theme_type_variation = &"TextoVerde" if dominado else &"TextoNaranja"
+	pct.theme_type_variation = &"TextoVerde" if dominado and not mejorable_chip else &"TextoNaranja"
 	chip.add_child(pct)
 	fila.add_child(chip)
 
