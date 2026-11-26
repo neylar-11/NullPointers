@@ -488,6 +488,22 @@ content_margin_top = 8.0
 content_margin_right = 16.0
 content_margin_bottom = 8.0
 
+[sub_resource type="StyleBoxFlat" id="chip_naranja"]
+bg_color = Color(0.9922, 0.9451, 0.9176, 1.0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9765, 0.8275, 0.7451, 1.0)
+corner_radius_top_left = 999
+corner_radius_top_right = 999
+corner_radius_bottom_right = 999
+corner_radius_bottom_left = 999
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
 [sub_resource type="StyleBoxFlat" id="chip_gris"]
 bg_color = Color(0.9137, 0.9216, 0.9451, 1.0)
 corner_radius_top_left = 999
@@ -1002,6 +1018,8 @@ ChipVerde/base_type = &"PanelContainer"
 ChipVerde/styles/panel = SubResource("chip_verde")
 ChipGris/base_type = &"PanelContainer"
 ChipGris/styles/panel = SubResource("chip_gris")
+ChipNaranja/base_type = &"PanelContainer"
+ChipNaranja/styles/panel = SubResource("chip_naranja")
 Hoja/base_type = &"PanelContainer"
 Hoja/styles/panel = SubResource("hoja")
 Modal/base_type = &"PanelContainer"

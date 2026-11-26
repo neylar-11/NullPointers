@@ -746,14 +746,56 @@ func obtener_reactivos_tema(id_tema: int) -> Array:
 			lista.append(r)
 	return lista
 
-## Sortea las preguntas de un intento: num_preguntas al azar del banco del tema,
-## sin repetir (regla del Sprint 3: cada intento trae preguntas distintas).
+## Banco propio de cada quiz: el banco del tema (ordenado por id) se reparte entre
+## el Quiz I (posiciones pares) y el Quiz II (posiciones impares), así los dos quizzes
+## de un tema nunca comparten preguntas (DEF-07).
+func banco_modulo(id_modulo: int) -> Array:
+	var m := obtener_modulo(id_modulo)
+	if m.is_empty():
+		return []
+	var banco := obtener_reactivos(id_modulo)
+	banco.sort_custom(func(a, b): return int(a["id"]) < int(b["id"]))
+	var quizzes: Array = []
+	for q in obtener_modulos_tema(int(m.get("id_tema", 1))):
+		if q["tipo"] == "quiz":
+			quizzes.append(int(q["id"]))
+	var cuantos := maxi(quizzes.size(), 1)
+	var mio := maxi(quizzes.find(id_modulo), 0)
+	var propio: Array = []
+	for k in banco.size():
+		if k % cuantos == mio:
+			propio.append(banco[k])
+	return propio
+
+## Sortea las preguntas de un intento: num_preguntas al azar del banco propio del
+## módulo, sin repetir dentro del intento y evitando, mientras alcance el banco,
+## las preguntas del intento anterior de ese módulo (cada intento trae preguntas
+## distintas; DEF-07).
 func sortear_reactivos(id_modulo: int) -> Array:
 	var m := obtener_modulo(id_modulo)
-	var banco := obtener_reactivos(id_modulo)
-	banco.shuffle()
+	var banco := banco_modulo(id_modulo)
 	var n: int = int(m.get("num_preguntas", PREGUNTAS_POR_QUIZ)) if not m.is_empty() else PREGUNTAS_POR_QUIZ
-	return banco.slice(0, mini(n, banco.size()))
+	var previas: Array = []
+	for id_prev in bd.get("ultimo_sorteo", {}).get(str(id_modulo), []):
+		previas.append(int(id_prev))      # el JSON guarda los números como float
+	var nuevas: Array = []
+	var repetidas: Array = []
+	for r in banco:
+		if int(r["id"]) in previas:
+			repetidas.append(r)
+		else:
+			nuevas.append(r)
+	nuevas.shuffle()
+	repetidas.shuffle()
+	var sorteo: Array = (nuevas + repetidas).slice(0, mini(n, banco.size()))
+	sorteo.shuffle()
+	var ids: Array = []
+	for r in sorteo:
+		ids.append(int(r["id"]))
+	if not bd.has("ultimo_sorteo"):
+		bd["ultimo_sorteo"] = {}
+	bd["ultimo_sorteo"][str(id_modulo)] = ids
+	return sorteo
 
 func obtener_intentos(id_modulo: int) -> Array:
 	var lista: Array = []
@@ -1322,11 +1364,18 @@ func obtener_progreso() -> Dictionary:
 			"mejor_porcentaje": mejor,
 			"mejor_puntos": mejor_puntos,
 			"intentos": intentos_mod.size(),
+			# Completado pero sin 100 %: se puede rejugar para subir el puntaje (y los puntos
+			# totales suben solo con la mejora, regla del CU-03).
+			"mejorable": mejor >= PORCENTAJE_MINIMO and mejor < 100,
 		}
 		if mejor >= PORCENTAJE_MINIMO:
 			dominados.append(fila)
 		else:
 			mejora.append(fila)
+	var mejorables := 0
+	for f in dominados:
+		if f["mejorable"]:
+			mejorables += 1
 	return {
 		"puntuacion_total": obtener_puntos_totales(),
 		"modulos_completados": modulos_completados(),
@@ -1335,6 +1384,7 @@ func obtener_progreso() -> Dictionary:
 		"tiene_intentos": not bd["intentos_modulo"].is_empty(),
 		"dominados": dominados,
 		"areas_mejora": mejora,
+		"mejorables": mejorables,
 		"errores_pendientes": obtener_errores_pendientes().size(),     # CU-09
 		"temas_dominados": temas_dominados(),                            # CU-11
 		"temas_totales": bd["temas"].size(),
@@ -1938,6 +1988,68 @@ func _bd_inicial() -> Dictionary:
 			_reactivo(190, 12, "¿Cuál es una buena práctica para guardar las contraseñas de los usuarios?",
 				["Guardarlas transformadas con una función hash", "Enviarlas por correo al administrador", "Guardarlas en texto plano", "Escribirlas en el código fuente"], 0,
 				"Con un hash, aunque alguien robe la base de datos, no ve las contraseñas originales.", "privacidad"),
+			# ---- Ampliación del banco (DEF-07): 5 preguntas más en los temas 9 a 12 para que
+			#      Quiz I y Quiz II tengan bancos propios de 7-8 preguntas ----
+			_reactivo(191, 9, "Revisar el SDS para comprobar que cumple con lo que dice el SRS es una actividad de:",
+				["Verificación", "Validación", "Despliegue", "Mantenimiento"], 0,
+				"Verificar = comprobar que cada producto es consistente con el anterior (¿estamos construyendo bien el producto?).", "verif_valid"),
+			_reactivo(192, 9, "¿Quién participa en una inspección de software, además del autor?",
+				["Un moderador y revisores que leen el producto antes de la reunión", "Solo el cliente", "Únicamente el jefe del proyecto", "Nadie; la hace una herramienta automática"], 0,
+				"La inspección es una revisión formal: moderador, autor y revisores preparados con una lista de verificación.", "revisiones"),
+			_reactivo(193, 9, "Definir el proceso de pruebas y las plantillas que usará todo el equipo es una actividad de:",
+				["Aseguramiento de la calidad (QA)", "Control de calidad (QC)", "Codificación", "Elicitación"], 0,
+				"QA define y mejora el proceso; QC revisa los productos concretos.", "qa_qc"),
+			_reactivo(194, 9, "Que la app proteja el progreso de cada perfil contra modificaciones externas corresponde a la característica:",
+				["Seguridad", "Usabilidad", "Portabilidad", "Eficiencia de desempeño"], 0,
+				"Seguridad: confidencialidad, integridad y protección de los datos.", "iso25010"),
+			_reactivo(195, 9, "Las pruebas de usuario con los alumnos del grupo piloto son principalmente una actividad de:",
+				["Validación", "Verificación", "Refactorización", "Estimación"], 0,
+				"Validar = comprobar con el usuario que el producto resuelve su necesidad (¿estamos construyendo el producto correcto?).", "verif_valid"),
+			_reactivo(196, 10, "¿Qué debe hacer el programador cuando Git marca un conflicto de fusión?",
+				["Abrir el archivo, decidir qué versión queda y hacer un commit", "Borrar el repositorio y clonarlo de nuevo", "Esperar a que Git lo resuelva solo", "Subir el archivo con las marcas <<<< y >>>>"], 0,
+				"Git marca las dos versiones; una persona decide cuál queda (o combina) y confirma con un commit.", "merge"),
+			_reactivo(197, 10, "Un cambio pequeño y con un solo propósito por commit sirve para:",
+				["Entender y revertir cambios con facilidad", "Ocupar menos espacio en disco", "Evitar que otros vean el código", "Saltarse las pruebas"], 0,
+				"Commits pequeños y enfocados: fáciles de revisar y de deshacer si algo falla.", "commit_git"),
+			_reactivo(198, 10, "¿Qué comando guarda en tu historial local los cambios que ya preparaste (staged)?",
+				["git commit", "git clone", "git status", "git fetch"], 0,
+				"add prepara, commit guarda en el historial local, push lo sube al remoto.", "commit_git"),
+			_reactivo(199, 10, "Antes de unir una rama de funcionalidad a main, lo recomendable es:",
+				["Abrir un pull request para que un compañero revise el cambio", "Borrar la rama main", "Unirla sin avisar a nadie", "Copiar los archivos a mano"], 0,
+				"El pull request permite revisar, comentar y probar antes de integrar.", "repo_remoto"),
+			_reactivo(200, 10, "Etiquetar la versión 3.0.0 del APK y saber exactamente qué código la generó es parte de:",
+				["La gestión de configuración del software", "La elicitación de requerimientos", "El diseño detallado", "La priorización MoSCoW"], 0,
+				"La gestión de configuración identifica y controla las versiones de cada producto del proyecto.", "control_versiones"),
+			_reactivo(201, 11, "Si el proyecto debe terminar antes sin cambiar el alcance, lo más probable es que:",
+				["Suba el costo (más personas u horas)", "Baje el costo", "No pase nada", "Mejore la calidad automáticamente"], 0,
+				"Tiempo, costo y alcance están ligados: apretar uno mueve los otros.", "triple_restriccion"),
+			_reactivo(202, 11, "Aceptar un riesgo significa:",
+				["No actuar de antemano y reservar un plan de contingencia por si ocurre", "Eliminar la causa del riesgo", "Pasárselo a un proveedor", "Ignorarlo por completo sin plan"], 0,
+				"Aceptar: se monitorea y se tiene una respuesta lista, pero no se gasta en prevenirlo.", "estrategias_riesgo"),
+			_reactivo(203, 11, "El plan de contingencia de un riesgo describe:",
+				["Qué hará el equipo si el riesgo se materializa", "Cómo se escribe el SRS", "El diagrama de clases del sistema", "La lista de commits del sprint"], 0,
+				"Contingencia = plan B que se ejecuta cuando el riesgo ya ocurrió.", "riesgo"),
+			_reactivo(204, 11, "En la EDT/WBS, los paquetes de trabajo del nivel más bajo deben ser:",
+				["Lo bastante pequeños para estimarse y asignarse a una persona", "Tan grandes como todo el proyecto", "Solo los que hace el jefe", "Los que no tienen fecha"], 0,
+				"La EDT descompone el trabajo hasta paquetes manejables que se pueden estimar y rastrear.", "wbs"),
+			_reactivo(205, 11, "Una tarea del Gantt que, si se retrasa, retrasa la fecha final del proyecto está en:",
+				["La ruta crítica", "El backlog", "La fase de mantenimiento", "La triple restricción"], 0,
+				"La ruta crítica es la cadena de tareas sin holgura; cualquier retraso ahí mueve el fin del proyecto.", "hitos"),
+			_reactivo(206, 12, "Descubres que un compañero copió un módulo completo de otro equipo. Según el código de ética debes:",
+				["Señalarlo y proponer rehacerlo o dar el crédito correspondiente", "Ignorarlo mientras funcione", "Entregarlo como propio", "Borrar la evidencia"], 0,
+				"El código de ética pide honestidad y respeto a la propiedad intelectual, aun cuando sea incómodo.", "codigo_etica"),
+			_reactivo(207, 12, "Prometer al cliente una fecha que sabes que no se puede cumplir viola el principio de:",
+				["Honestidad", "Portabilidad", "Modularidad", "Trazabilidad"], 0,
+				"Ser honesto sobre tiempos y limitaciones es parte de la competencia profesional.", "honestidad"),
+			_reactivo(208, 12, "Una biblioteca con licencia GPL se usa en tu app. ¿Qué obligación suele traer?",
+				["Publicar el código fuente de tu app bajo la misma licencia si la distribuyes", "Pagar una cuota mensual", "Ninguna, es dominio público", "Cambiarle el nombre a la biblioteca"], 0,
+				"GPL es copyleft: lo que distribuyes con ella debe conservar la misma libertad.", "licencias"),
+			_reactivo(209, 12, "Para probar la app, un compañero quiere usar las calificaciones reales de los alumnos. Lo correcto es:",
+				["Usar datos ficticios o anonimizados", "Usar los reales, nadie se dará cuenta", "Publicarlos en el repositorio", "Guardarlos en un chat del equipo"], 0,
+				"Los datos personales solo se usan con consentimiento y para el fin acordado; para pruebas, datos ficticios.", "privacidad"),
+			_reactivo(210, 12, "Mantenerse actualizado y no aceptar trabajo que no se sabe hacer es parte de:",
+				["La competencia profesional", "La gestión de configuración", "El modelo en cascada", "La densidad de defectos"], 0,
+				"El ingeniero debe conocer sus límites, capacitarse y pedir ayuda cuando haga falta.", "honestidad"),
 		],
 		"intentos_modulo": [],
 		# ---- Conceptos de teoría (CU-04) ----
@@ -2315,6 +2427,36 @@ func _bd_inicial() -> Dictionary:
 				"Una app debe informar qué datos personales recolecta y para qué, pedir consentimiento, guardar solo lo necesario y protegerlo; por ejemplo, las contraseñas se guardan transformadas con una función hash, nunca en texto plano.",
 				["Consentimiento", "Datos mínimos", "Hash"],
 				"Si no lo necesitas, no lo pidas; si lo guardas, protégelo."),
+			# ---- Conceptos resumen para los ejercicios que abarcan varios conceptos (DEF-08):
+			#      antes "Ver teoría" abría solo uno de ellos y parecía de otro ejercicio ----
+			_concepto("modelos_ciclo_vida", 2, "Cómo elegir el modelo de ciclo de vida",
+				"No hay un modelo mejor para todo. Cascada: requerimientos claros y estables. Prototipado: el cliente no sabe qué quiere hasta ver algo. Espiral: proyectos grandes y con riesgo técnico, porque cada vuelta analiza riesgos. Scrum y los marcos ágiles: requerimientos cambiantes y entregas frecuentes.",
+				["Estable → cascada", "Incierto → prototipado", "Riesgoso → espiral", "Cambiante → ágil"],
+				"Pregúntate qué tan claros y estables son los requerimientos y cuánto riesgo hay."),
+			_concepto("proceso_requerimientos", 3, "El proceso de ingeniería de requerimientos",
+				"La ingeniería de requerimientos se hace en orden: elicitación (obtenerlos de los interesados), análisis (resolver conflictos y priorizar), especificación (escribirlos en el SRS), validación (comprobar con el cliente que son correctos) y gestión (controlar los cambios durante el proyecto).",
+				["Elicitar", "Analizar", "Especificar", "Validar", "Gestionar"],
+				"Primero se obtienen, luego se escriben y al final se validan y se cuidan."),
+			_concepto("buen_diseno", 5, "Qué hace bueno a un diseño",
+				"Un buen diseño tiene bajo acoplamiento (los módulos dependen poco entre sí), alta cohesión (cada módulo hace una sola cosa), no repite código (DRY), es lo más simple posible (KISS) y respeta las capas de la arquitectura. Duplicar código, saltarse capas o crear clases gigantes es mal diseño.",
+				["Bajo acoplamiento", "Alta cohesión", "DRY", "KISS"],
+				"Si cambiar algo obliga a tocar muchas partes, el diseño es malo."),
+			_concepto("principios_diseno", 5, "Principios de diseño: abstracción, encapsulamiento y modularidad",
+				"Abstracción: quedarse con lo esencial y usar algo sin conocer su interior (llamas enviarCorreo() sin saber cómo se conecta). Encapsulamiento: esconder los datos internos y exponer solo métodos. Modularidad: dividir el sistema en partes independientes que se entienden y prueban por separado.",
+				["Abstracción", "Encapsulamiento", "Modularidad"],
+				"Abstraer = quedarse con lo esencial; encapsular = esconder; modular = dividir."),
+			_concepto("depuracion", 6, "Depuración: cómo corregir un defecto",
+				"Cuando aparece una falla, primero se reproduce (si no se puede reproducir, no se sabe si se corrigió), luego se localiza el defecto en el código, se corrige y, al final, se vuelven a ejecutar las pruebas (incluidas las de regresión) para confirmar la corrección y no romper otra cosa.",
+				["Reproducir", "Localizar", "Corregir", "Volver a probar"],
+				"Reproducir → localizar → corregir → probar de nuevo."),
+			_concepto("comandos_git", 10, "Comandos básicos de Git",
+				"git branch crea una línea de trabajo aparte; git merge une una rama con otra; git pull trae a tu copia lo que subieron tus compañeros; git push sube tus commits al repositorio remoto. Antes de todo: git add prepara los cambios y git commit los guarda en el historial.",
+				["branch", "merge", "pull", "push"],
+				"branch = separar; merge = unir; pull = traer; push = subir."),
+			_concepto("principios_eticos", 12, "Principios éticos del ingeniero de software",
+				"Privacidad: pedir consentimiento, recolectar solo lo necesario y proteger los datos. Honestidad: decir la verdad al cliente sobre avances, retrasos y limitaciones. Licencias: respetar al autor del código ajeno, revisar la licencia y dar crédito. Los tres salen del código de ética de ACM/IEEE.",
+				["Privacidad", "Honestidad", "Licencias"],
+				"Datos → privacidad; verdad → honestidad; código ajeno → licencias."),
 		],
 		# ---- CU-05: insignias con niveles bronce / plata / oro ----
 		"insignias": [
@@ -2384,7 +2526,7 @@ func _bd_inicial() -> Dictionary:
 			# ---- Tema 2 ----
 			_pz(2, _ej_clasificar("¿Qué modelo de ciclo de vida conviene en cada situación?", ["Cascada", "Prototipado", "Espiral", "Scrum"], [
 				["Requerimientos claros y estables, por ejemplo un sistema de nómina conocido", "Cascada"], ["El cliente no sabe qué quiere hasta ver algo", "Prototipado"], ["Proyecto grande con mucho riesgo técnico", "Espiral"], ["Requerimientos que cambian y entregas cada dos semanas", "Scrum"], ["Se necesita probar ideas de interfaz con usuarios antes de construir", "Prototipado"], ["Sistema crítico donde cada vuelta empieza analizando riesgos", "Espiral"]],
-				"Estable → cascada; incierto para el cliente → prototipado; riesgoso → espiral; cambiante con entregas frecuentes → Scrum.", "cascada")),
+				"Estable → cascada; incierto para el cliente → prototipado; riesgoso → espiral; cambiante con entregas frecuentes → Scrum.", "modelos_ciclo_vida")),
 			_pz(2, _ej_ordenar("Ordena las fases del modelo en cascada, de la primera a la última.", [
 				"Análisis de requerimientos", "Diseño", "Implementación", "Pruebas", "Mantenimiento"],
 				"No puedes probar lo que no has programado ni programar lo que no has diseñado.", "cascada")),
@@ -2397,7 +2539,7 @@ func _bd_inicial() -> Dictionary:
 				"Un requerimiento verificable tiene un criterio medible; «fácil», «rápida» o «buena» no se pueden probar.", "verificabilidad")),
 			_pz(3, _ej_ordenar("Ordena las actividades de la ingeniería de requerimientos.", [
 				"Elicitación", "Análisis", "Especificación", "Validación"],
-				"Primero se obtienen los requerimientos, luego se analizan, se escriben en el SRS y al final se validan con el cliente.", "elicitacion")),
+				"Primero se obtienen los requerimientos, luego se analizan, se escriben en el SRS y al final se validan con el cliente.", "proceso_requerimientos")),
 			_pz(3, _ej_clasificar("Clasifica cada requerimiento del cliente de una biblioteca escolar.", ["Funcional", "No funcional"], [
 				["Registrar el préstamo de un libro", "Funcional"], ["Responder en menos de 2 segundos", "No funcional"], ["Enviar recordatorio de devolución", "Funcional"], ["Funcionar sin conexión a internet", "No funcional"], ["Cifrar las contraseñas de los usuarios", "No funcional"], ["Generar el reporte mensual de préstamos", "Funcional"]],
 				"Funcional = una acción que el sistema hace; no funcional = una cualidad o límite (tiempo, seguridad, disponibilidad).", "req_no_funcional")),
@@ -2423,13 +2565,13 @@ func _bd_inicial() -> Dictionary:
 				"Modelo = datos y reglas; vista = lo que se ve; controlador = recibe acciones y coordina.", "mvc")),
 			_pz(5, _ej_clasificar("¿Es una decisión de buen diseño o de mal diseño?", ["Buen diseño", "Mal diseño"], [
 				["Dos módulos que se comunican solo por una interfaz", "Buen diseño"], ["Copiar la función de validación en cinco pantallas", "Mal diseño"], ["Un módulo que hace una sola cosa", "Buen diseño"], ["La vista consulta directamente la base de datos", "Mal diseño"], ["Elegir la solución más simple que funciona", "Buen diseño"], ["Una clase de 3 000 líneas que hace de todo", "Mal diseño"]],
-				"Bajo acoplamiento, alta cohesión, DRY y KISS son buen diseño; duplicar código, saltarse capas y clases gigantes son mal diseño.", "dry_kiss")),
+				"Bajo acoplamiento, alta cohesión, DRY y KISS son buen diseño; duplicar código, saltarse capas y clases gigantes son mal diseño.", "buen_diseno")),
 			_pz(5, _ej_ordenar("Ordena los niveles del diseño, del más general al más detallado.", [
 				"Diseño arquitectónico: componentes y cómo se comunican", "Diseño de interfaces entre componentes", "Diseño detallado: clases, métodos y datos de cada componente", "Codificación"],
 				"Primero el plano de la casa (arquitectura), luego cómo se conectan los cuartos y al final cada cuarto por dentro.", "niveles_diseno")),
 			_pz(5, _ej_clasificar("¿Qué principio de diseño aplica cada frase?", ["Abstracción", "Encapsulamiento", "Modularidad"], [
 				["Usar enviarCorreo() sin saber cómo se conecta al servidor", "Abstracción"], ["Los datos de la clase son privados y se cambian solo con métodos", "Encapsulamiento"], ["Dividir la app en módulos de perfil, mapa y actividad", "Modularidad"], ["Modelar un Alumno solo con nombre, matrícula y promedio", "Abstracción"], ["Cambiar la base de datos sin que las pantallas se enteren", "Encapsulamiento"], ["Probar el módulo de insignias por separado", "Modularidad"]],
-				"Quedarse con lo esencial = abstracción; esconder lo interno = encapsulamiento; dividir en partes independientes = modularidad.", "abstraccion")),
+				"Quedarse con lo esencial = abstracción; esconder lo interno = encapsulamiento; dividir en partes independientes = modularidad.", "principios_diseno")),
 			# ---- Tema 6 ----
 			_pz(6, _ej_clasificar("Un campo acepta edades de 18 a 60. ¿El sistema debe aceptar o rechazar cada valor?", ["Aceptar", "Rechazar"], [
 				["18", "Aceptar"], ["17", "Rechazar"], ["60", "Aceptar"], ["61", "Rechazar"], ["35", "Aceptar"], ["−1", "Rechazar"]],
@@ -2439,7 +2581,7 @@ func _bd_inicial() -> Dictionary:
 				"Una pieza → unitaria; piezas juntas → integración; todo el sistema → sistema; el cliente decide → aceptación.", "aceptacion")),
 			_pz(6, _ej_ordenar("Ordena los pasos para corregir un defecto (bug).", [
 				"Reproducir la falla", "Localizar la línea que la causa", "Corregir el código", "Volver a ejecutar las pruebas"],
-				"Si no puedes reproducir la falla, no sabes si la corregiste; al final se repiten las pruebas para no romper otra cosa.", "error_defecto_falla")),
+				"Si no puedes reproducir la falla, no sabes si la corregiste; al final se repiten las pruebas para no romper otra cosa.", "depuracion")),
 			_pz(6, _ej_ordenar("Ordena el ciclo de TDD (desarrollo guiado por pruebas).", [
 				"Escribir una prueba que falla (rojo)", "Escribir el código mínimo para que pase (verde)", "Refactorizar el código", "Repetir con la siguiente prueba"],
 				"En TDD la prueba va antes que el código: rojo → verde → refactorizar.", "tdd")),
@@ -2482,7 +2624,7 @@ func _bd_inicial() -> Dictionary:
 				"Un buen mensaje dice qué cambió y por qué; «cambios» o «asdf» no le sirven a nadie dentro de una semana.", "commit_git")),
 			_pz(10, _ej_clasificar("¿Qué comando de Git usarías?", ["git branch", "git merge", "git pull", "git push"], [
 				["Crear una línea de trabajo aparte para el CU-08", "git branch"], ["Unir la rama feature/CU-08 a main", "git merge"], ["Traer a mi copia lo que subieron mis compañeros", "git pull"], ["Subir mis commits al repositorio remoto", "git push"], ["Juntar dos ramas y resolver conflictos si los hay", "git merge"], ["Actualizar mi main antes de empezar", "git pull"]],
-				"branch = separar; merge = unir; pull = traer; push = subir.", "ramas")),
+				"branch = separar; merge = unir; pull = traer; push = subir.", "comandos_git")),
 			# ---- Tema 11 ----
 			_pz(11, _ej_ordenar("Ordena los pasos de la gestión de riesgos.", [
 				"Identificar los riesgos", "Analizar su probabilidad e impacto", "Planear la respuesta", "Monitorear los riesgos"],
@@ -2499,7 +2641,7 @@ func _bd_inicial() -> Dictionary:
 				"Respetar licencias, informar a tiempo y proteger a los usuarios es ético; plagiar, ocultar defectos y descuidar datos no lo es.", "codigo_etica")),
 			_pz(12, _ej_clasificar("¿Qué principio ético está en juego en cada caso?", ["Privacidad", "Honestidad", "Licencias"], [
 				["Pedir consentimiento antes de recolectar datos", "Privacidad"], ["Avisar al cliente del retraso en cuanto se detecta", "Honestidad"], ["Revisar los términos antes de usar código ajeno", "Licencias"], ["Guardar las contraseñas con hash", "Privacidad"], ["No ocultar un defecto conocido", "Honestidad"], ["Dar crédito al autor del código reutilizado", "Licencias"]],
-				"Datos de los usuarios → privacidad; decir la verdad al cliente → honestidad; respetar al autor → licencias.", "licencias")),
+				"Datos de los usuarios → privacidad; decir la verdad al cliente → honestidad; respetar al autor → licencias.", "principios_eticos")),
 		],
 		# ---- CU-11: una práctica de ingeniero por tema (escenario; los ejercicios se sortean del banco) ----
 		"practicas": [

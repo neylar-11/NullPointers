@@ -51,8 +51,8 @@ func test_seleccionar_tema_lo_recuerda_como_ultimo():
 	assert_eq(int(repo.obtener_ultimo_tema()["id"]), 9)
 	assert_true(repo.obtener_catalogo_temas()[8]["es_ultimo"])
 
-# UT-08-05: el banco tiene 15 preguntas en los temas 1-8 y 10 en los temas 9-12 (160)
-func test_banco_de_160_preguntas_por_tema():
-	assert_eq(repo.bd["reactivos"].size(), 160)
+# UT-08-05: el banco tiene 15 preguntas por tema (180; los temas 9-12 se ampliaron en el cierre del Sprint 3)
+func test_banco_de_180_preguntas_por_tema():
+	assert_eq(repo.bd["reactivos"].size(), 180)
 	for t in range(1, 13):
-		assert_eq(repo.obtener_reactivos_tema(t).size(), 15 if t <= 8 else 10, "Tema %d" % t)
+		assert_eq(repo.obtener_reactivos_tema(t).size(), 15, "Tema %d" % t)
